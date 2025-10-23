@@ -1,0 +1,42 @@
+LibraX
+├── backend
+│   ├── flask-server
+│   │   ├── directory_structure.py
+│   │   └── directory_structure.txt
+│   ├── node-server
+│   └── postgre
+├── frontend
+│   ├── .gitignore
+│   ├── README.md
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   │   ├── HoKLibrary 128x128.png
+│   │   └── vite.svg
+│   ├── src
+│   │   ├── App.css
+│   │   ├── App.tsx
+│   │   ├── AppRoutes.tsx
+│   │   ├── assets
+│   │   │   └── react.svg
+│   │   ├── hooks
+│   │   │   └── usePageMeta.ts
+│   │   ├── index.css
+│   │   ├── main.tsx
+│   │   └── pages
+│   │       ├── Dashboard
+│   │       ├── LandingPage
+│   │       │   ├── Home
+│   │       │   │   ├── Home.css
+│   │       │   │   └── Home.tsx
+│   │       │   ├── Login
+│   │       │   └── UserRegistration
+│   │       ├── PageNotFound.css
+│   │       └── PageNotFound.tsx
+│   ├── tsconfig.app.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
+└── react_js.md

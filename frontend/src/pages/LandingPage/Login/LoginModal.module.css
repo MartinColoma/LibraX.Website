@@ -1,0 +1,354 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45); /* softer overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modalContent {
+  background: #fff8f0; /* light cream */
+  color: #2d2d2d;
+  border-radius: 20px;
+  width: 700px;
+  max-width: 95%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  position: relative;
+  border: 2px solid #bb9457; /* warm beige border */
+  overflow: hidden;
+}
+
+.modalCloseBtn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  color: #6f1d1b; /* falu red */
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  z-index: 10;
+}
+
+.modalCloseBtn:hover {
+  color: #99582a; /* warm brown */
+}
+
+.modalBody {
+  display: flex;
+  min-height: 300px;
+}
+
+/* Left side - Image Section */
+.imageSection {
+  flex: 1;
+  position: relative;
+  background: linear-gradient(135deg, #432818, #6f1d1b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.libraryImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+}
+
+.imageOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(67, 40, 24, 0.85),
+    rgba(111, 29, 27, 0.75)
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px 30px;
+  color: white;
+}
+
+.welcomeText {
+  font-size: 18px;
+  font-weight: 400;
+  margin: 0 0 10px 0;
+  opacity: 0.9;
+  letter-spacing: 1px;
+}
+
+.libraryTitle {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0 0 15px 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.librarySubtitle {
+  font-size: 16px;
+  font-weight: 300;
+  margin: 0;
+  opacity: 0.8;
+  letter-spacing: 0.5px;
+}
+
+/* Right side - Form Section */
+.formSection {
+  flex: 1;
+  padding: 60px 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.modalTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #432818; /* dark bistre brown */
+  margin-bottom: 30px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.modalLoginForm {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formLabelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 10px 5px 10px;
+}
+
+.formGroup label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #432818; /* strong brown text */
+  margin: 0;
+}
+
+.formErrorInline {
+  color: #d62828; /* warning red */
+  font-size: 14px;
+  white-space: nowrap;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+.formGroup input {
+  padding: 15px 20px;
+  border: 2px solid #e5dcc3; /* light beige border */
+  border-radius: 1.5rem;
+  background: #fff; /* white input */
+  color: #2d2d2d;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.formGroup input:focus {
+  outline: none;
+  border-color: #bb9457; /* warm beige focus */
+  box-shadow: 0 0 0 3px rgba(187, 148, 87, 0.25);
+}
+
+.formGroup input::placeholder {
+  color: #888;
+}
+
+/* Fix Chrome Autofill Styles */
+.formGroup input:-webkit-autofill,
+.formGroup input:-webkit-autofill:hover,
+.formGroup input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #2d2d2d !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+  border: 2px solid #e5dcc3 !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+.formGroup input:-webkit-autofill:focus {
+  box-shadow:
+    0 0 0 1000px #fff inset,
+    0 0 0 3px rgba(187, 148, 87, 0.25);
+  border-color: #bb9457 !important;
+  caret-color: #2d2d2d !important;
+  transition: none !important;
+  outline: none;
+}
+
+.passwordInputContainer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.passwordInputContainer input {
+  padding-top: 22px;
+}
+
+.eyeBtn {
+  position: absolute;
+  top: 18px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  color: #6f1d1b; /* deep red */
+  cursor: pointer;
+  z-index: 2;
+  transition: color 0.3s ease;
+}
+
+.eyeBtn:hover {
+  color: #bb9457; /* warm beige hover */
+}
+
+.btnPrimary {
+  padding: 18px 36px;
+  border: none;
+  border-radius: 1.5rem;
+  font-size: 18px;
+  font-weight: 600;
+  background: #bb9457; /* main accent beige */
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #99582a; /* darker warm brown */
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(153, 88, 42, 0.3);
+}
+
+.btnPrimary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.formError {
+  color: #d62828; /* error red */
+  font-size: 14px;
+  margin-top: 5px;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.loadingSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.animateSpin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .modalContent {
+    width: 95%;
+    max-width: 500px;
+  }
+  
+  .modalBody {
+    flex-direction: column;
+    min-height: auto;
+  }
+  
+  .imageSection {
+    min-height: 200px;
+    flex: none;
+  }
+  
+  .libraryTitle {
+    font-size: 28px;
+  }
+  
+  .welcomeText {
+    font-size: 16px;
+  }
+  
+  .librarySubtitle {
+    font-size: 14px;
+  }
+  
+  .formSection {
+    padding: 40px 30px;
+  }
+  
+  .modalTitle {
+    font-size: 24px;
+    margin-bottom: 25px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalContent {
+    border-radius: 15px;
+    margin: 20px;
+  }
+  
+  .imageSection {
+    min-height: 150px;
+  }
+  
+  .libraryTitle {
+    font-size: 24px;
+  }
+  
+  .welcomeText {
+    font-size: 14px;
+  }
+  
+  .formSection {
+    padding: 30px 25px;
+  }
+  
+  .modalTitle {
+    font-size: 20px;
+  }
+  
+  .btnPrimary {
+    font-size: 16px;
+    padding: 16px 32px;
+  }
+}
