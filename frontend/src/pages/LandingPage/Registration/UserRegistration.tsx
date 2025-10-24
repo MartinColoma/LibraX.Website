@@ -28,7 +28,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     e.preventDefault();
 
     try {
-        const res = await fetch("http://localhost:3000/supa/register-user", {
+        const res = await fetch("http://libra-x-website.vercel.app/supa/register-user", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
