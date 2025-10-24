@@ -1,6 +1,6 @@
 import os
 
-EXCLUDED_DIRS = {"node_modules", ".git", ".vscode", ".venv"}
+EXCLUDED_DIRS = {"node_modules", ".git", ".vscode", ".venv", "backend"}
 
 def list_dir_tree(root_dir, file_object, prefix=""):
     """Recursively writes the directory tree into a file."""
