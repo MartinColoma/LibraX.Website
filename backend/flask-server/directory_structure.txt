@@ -1,15 +1,9 @@
 LibraX
-├── backend
-│   ├── flask-server
-│   │   ├── Harry Potter - Poster.mrc
-│   │   ├── directory_structure.py
-│   │   ├── directory_structure.txt
-│   │   ├── package-lock.json
-│   │   ├── package.json
-│   │   ├── requirements.txt
-│   │   └── translate_marc.py
-│   ├── node-server
-│   │   ├── .env
+├── frontend
+│   ├── .env
+│   ├── .gitignore
+│   ├── README.md
+│   ├── api
 │   │   ├── local_postgre
 │   │   │   ├── db.js
 │   │   │   └── routes
@@ -17,15 +11,9 @@ LibraX
 │   │   ├── package-lock.json
 │   │   ├── package.json
 │   │   ├── server.js
-│   │   └── supabase
-│   │       ├── routes
-│   │       │   └── supabase_users.js
+│   │   └── supa
+│   │       ├── register-user.js
 │   │       └── supa_db.js
-│   └── postgre
-│       └── librax_users.sql
-├── frontend
-│   ├── .gitignore
-│   ├── README.md
 │   ├── eslint.config.js
 │   ├── index.html
 │   ├── package-lock.json
@@ -45,22 +33,24 @@ LibraX
 │   │   │   └── library_cover.png
 │   │   ├── index.css
 │   │   ├── main.tsx
-│   │   └── pages
-│   │       ├── Dashboard
-│   │       │   ├── Librarian
-│   │       │   └── User
-│   │       ├── LandingPage
-│   │       │   ├── Home
-│   │       │   │   ├── Home.css
-│   │       │   │   └── Home.tsx
-│   │       │   ├── Login
-│   │       │   │   ├── LoginModal.module.css
-│   │       │   │   └── LoginModal.tsx
-│   │       │   └── Registration
-│   │       │       ├── UserRegistration.module.css
-│   │       │       └── UserRegistration.tsx
-│   │       ├── PageNotFound.css
-│   │       └── PageNotFound.tsx
+│   │   ├── pages
+│   │   │   ├── Dashboard
+│   │   │   │   ├── Librarian
+│   │   │   │   └── User
+│   │   │   ├── LandingPage
+│   │   │   │   ├── Home
+│   │   │   │   │   ├── Home.css
+│   │   │   │   │   └── Home.tsx
+│   │   │   │   ├── Login
+│   │   │   │   │   ├── LoginModal.module.css
+│   │   │   │   │   └── LoginModal.tsx
+│   │   │   │   └── Registration
+│   │   │   │       ├── UserRegistration.module.css
+│   │   │   │       └── UserRegistration.tsx
+│   │   │   ├── PageNotFound.css
+│   │   │   └── PageNotFound.tsx
+│   │   └── utils
+│   │       └── supabaseClient.ts
 │   ├── tsconfig.app.json
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
