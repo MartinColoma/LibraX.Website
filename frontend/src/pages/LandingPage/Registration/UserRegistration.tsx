@@ -32,7 +32,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
       const baseUrl =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-      const res = await fetch(`${baseUrl}/api/register-user`, {
+      const res = await fetch(`${baseUrl}/api/supa/register-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
