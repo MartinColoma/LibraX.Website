@@ -28,12 +28,12 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     e.preventDefault();
 
     try {
-        const res = await fetch("http://localhost:3000/register-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        const res = await fetch("http://localhost:3000/supa/register-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
         });
-
+        
         const data = await res.json();
 
         if (res.ok) {
