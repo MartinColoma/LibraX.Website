@@ -10,16 +10,17 @@ LibraX
 │   │   └── translate_marc.py
 │   ├── node-server
 │   │   ├── .env
-│   │   ├── db.js
-│   │   ├── email_register_acc.js
-│   │   ├── local_db.js
+│   │   ├── local_postgre
+│   │   │   ├── db.js
+│   │   │   └── routes
+│   │   │       └── users.js
 │   │   ├── package-lock.json
 │   │   ├── package.json
-│   │   ├── routes
-│   │   │   ├── supabase_users.js
-│   │   │   └── users.js
 │   │   ├── server.js
-│   │   └── supa_db.js
+│   │   └── supabase
+│   │       ├── routes
+│   │       │   └── supabase_users.js
+│   │       └── supa_db.js
 │   └── postgre
 │       └── librax_users.sql
 ├── frontend
