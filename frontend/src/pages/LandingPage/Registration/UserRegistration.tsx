@@ -15,7 +15,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     address: "",
     phone: "",
     idNumber: "",
-    email: ""
+    email: "",
   });
 
   const handleChange = (
@@ -24,32 +24,32 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-        const res = await fetch("http://localhost:3000/supa/register-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        
-        const data = await res.json();
+      // 👇 Dynamic base URL: works locally AND on Vercel
+      const baseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-        if (res.ok) {
-        console.log("Temporary password (hidden use only):", data.tempPassword); // debug only
-        // 🧠 Optionally store in state for DB insertion later
-        // localStorage.setItem("tempPassword", data.tempPassword);
-        }
+      const res = await fetch(`${baseUrl}/api/register-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-        alert(data.message);
-        onClose();
-    } catch (error) {
-        alert("Failed to register user");
-        console.error(error);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Registration failed");
+
+      console.log("Temporary password (debug only):", data.tempPassword);
+      alert(data.message);
+      onClose();
+    } catch (error: any) {
+      console.error("❌ Registration error:", error);
+      alert("Failed to register user. Please try again later.");
     }
-    };
-
+  };
 
   return (
     <div className={styles.backdrop}>
@@ -58,11 +58,16 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
           <h2 className={styles.title}>Register New User Account</h2>
 
           <form className={styles.form} onSubmit={handleSubmit}>
-            {/* Membership Type (full width) */}
+            {/* Membership Type */}
             <div className={styles.row1}>
               <label>
                 Membership Type (Role):
-                <select name="role" value={form.role} onChange={handleChange} required>
+                <select
+                  name="role"
+                  value={form.role}
+                  onChange={handleChange}
+                  required
+                >
                   <option value="">Select Membership Type</option>
                   <option value="Student">Student</option>
                   <option value="Faculty">Faculty</option>
@@ -101,7 +106,12 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
             <div className={styles.row2}>
               <label>
                 Gender:
-                <select name="gender" value={form.gender} onChange={handleChange} required>
+                <select
+                  name="gender"
+                  value={form.gender}
+                  onChange={handleChange}
+                  required
+                >
                   <option value="">Select gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -171,7 +181,11 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
             {/* Buttons */}
             <div className={styles.actions}>
-              <button type="button" className={styles.cancelBtn} onClick={onClose}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={onClose}
+              >
                 Cancel
               </button>
               <button type="submit" className={styles.createBtn}>
@@ -180,21 +194,6 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
             </div>
           </form>
         </div>
-
-        {/* Right: Account Preview */}
-        {/* <div className={styles.previewSection}>
-          <h3 className={styles.previewTitle}>Account Preview</h3>
-          <div className={styles.previewContent}>
-            <p><strong>Membership Type:</strong> {form.role || "—"}</p>
-            <p><strong>Full Name:</strong> {form.firstName} {form.lastName || "—"}</p>
-            <p><strong>Gender:</strong> {form.gender || "—"}</p>
-            <p><strong>Birthday:</strong> {form.birthday || "—"}</p>
-            <p><strong>Address:</strong> {form.address || "—"}</p>
-            <p><strong>Phone Number:</strong> {form.phone || "—"}</p>
-            <p><strong>Email:</strong> {form.email || "—"}</p>
-            <p><strong>ID Number:</strong> {form.idNumber || "—"}</p>
-          </div>
-        </div> */}
       </div>
     </div>
   );
