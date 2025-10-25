@@ -29,7 +29,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   try {
     const res = await fetch(
-      `https://${import.meta.env.VITE_API_BASE_URL}/api/LandingPage/registration`,
+      `https://libra-x-api.vercel.app/api/LandingPage/registration`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
