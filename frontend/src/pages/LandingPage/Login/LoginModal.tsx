@@ -17,7 +17,18 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
   const [checkingEmail, setCheckingEmail] = useState(false);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
+  /**
+   * ✅ Direct API base URL (no env var)
+   * Change this if you redeploy or move your API
+   */
+  const API_BASE = "https://libra-x-api.vercel.app/api";
+
+  const api = axios.create({
+    baseURL: API_BASE,
+    withCredentials: true,
+    timeout: 10000,
+  });
 
   useEffect(() => {
     emailInputRef.current?.focus();
@@ -54,9 +65,8 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     setCheckingEmail(true);
 
     try {
-      const response = await axios.get(`${API_BASE}/auth`, {
+      const response = await api.get(`/auth`, {
         params: { path: "check-email", email },
-        withCredentials: true,
       });
 
       if (!response.data.exists) {
@@ -64,8 +74,8 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
       } else {
         setErrors((prev) => ({ ...prev, email: "" }));
       }
-    } catch (error) {
-      console.error("Error checking email:", error);
+    } catch (err) {
+      console.error("Error checking email:", err);
     } finally {
       setCheckingEmail(false);
     }
@@ -95,14 +105,10 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     try {
       console.log("Attempting login:", formData.email);
 
-      const response = await axios.post(
-        `${API_BASE}/auth?path=login`,
-        {
-          email: formData.email.trim(),
-          password: formData.password.trim(),
-        },
-        { withCredentials: true }
-      );
+      const response = await api.post(`/auth?path=login`, {
+        email: formData.email.trim(),
+        password: formData.password.trim(),
+      });
 
       console.log("Login response:", response.data);
 
@@ -144,6 +150,8 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
           ...prev,
           password: "Incorrect email or password",
         }));
+      } else if (error.code === "ECONNABORTED") {
+        alert("Request timed out. Please check your internet connection.");
       } else if (error.request) {
         alert("Cannot connect to API. Check your network or deployment.");
       } else {
