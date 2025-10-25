@@ -9,6 +9,14 @@ import LandingPage from './pages/LandingPage/Home/Home'
 import LoginModal from './pages/LandingPage/Login/LoginModal';
 import RegisterModal from './pages/LandingPage/Registration/UserRegistration'
 
+
+//Import Librarian Pages
+import LibHome from './pages/Dashboard/Librarian/Home/Dash_Home';
+
+//Import User Pages
+import UserHome from './pages/Dashboard/User/Home/MD_Home';
+
+
 const AppRoutes: React.FC = () => {
   const location = useLocation();
 
@@ -21,6 +29,13 @@ const AppRoutes: React.FC = () => {
             <Routes location={background || location}>
                 <Route path='*' element={<PageNotFound />} />
                 <Route path="/" element={<LandingPage />} />
+
+                {/* librarian Page Routes */}
+                <Route path="/librarian/dashboard/home" element={<LibHome />} />
+
+
+                {/* User Page Routes */}
+                <Route path="/user/dashboard/home" element={<UserHome />} />
 
             </Routes>
             {/* modal pages */}

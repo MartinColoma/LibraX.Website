@@ -17,12 +17,13 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
   const [checkingEmail, setCheckingEmail] = useState(false);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
-
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
     emailInputRef.current?.focus();
   }, []);
 
+  // --- Validation ---
   const validateForm = () => {
     const newErrors = { email: "", password: "" };
     let isValid = true;
@@ -47,13 +48,17 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     return isValid;
   };
 
+  // --- Check if email exists ---
   const checkEmailExists = async (email: string) => {
     if (!email || errors.email) return;
     setCheckingEmail(true);
+
     try {
-      const response = await axios.get("http://localhost:5001/auth/check-email", {
-        params: { email },
+      const response = await axios.get(`${API_BASE}/auth`, {
+        params: { path: "check-email", email },
+        withCredentials: true,
       });
+
       if (!response.data.exists) {
         setErrors((prev) => ({ ...prev, email: "Email not registered" }));
       } else {
@@ -79,6 +84,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     checkEmailExists(formData.email.trim());
   };
 
+  // --- Handle Submit ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading || checkingEmail || !validateForm()) return;
@@ -87,10 +93,10 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      console.log("Attempting login with email:", formData.email);
+      console.log("Attempting login:", formData.email);
 
       const response = await axios.post(
-        "http://localhost:5001/auth/login",
+        `${API_BASE}/auth?path=login`,
         {
           email: formData.email.trim(),
           password: formData.password.trim(),
@@ -98,49 +104,38 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
         { withCredentials: true }
       );
 
-      console.log("Login response received:", response.data);
+      console.log("Login response:", response.data);
 
       const user = response.data.user;
-
       if (!user) {
-        console.error("No user object in response");
         alert("Login failed: Invalid response from server");
         return;
       }
 
-      console.log("User data:", {
-        user_type: user.user_type,
-        role: user.role,
-        full_name: user.full_name,
-      });
-
+      // Session storage
       const displayName =
-        user?.full_name || user?.username || user?.email || "Unknown User";
+        user.full_name || user.username || user.email || "Unknown User";
 
-      // Store user info in sessionStorage
-      try {
-        sessionStorage.setItem("user_name", displayName);
-        sessionStorage.setItem("user_role", user.role || "");
-        sessionStorage.setItem("user_type", user.user_type || "");
-        console.log("User data stored in sessionStorage");
-      } catch (storageError) {
-        console.error("SessionStorage error:", storageError);
-      }
+      sessionStorage.setItem("user_name", displayName);
+      sessionStorage.setItem("user_role", user.role || "");
+      sessionStorage.setItem("user_type", user.user_type || "");
 
+      console.log("User stored in sessionStorage");
 
+      // Redirect based on user_type + role
       if (user.user_type === "staff") {
-        if (user.role === "librarian") {
-          window.location.href = "/librarian/dashboard/home"; // guaranteed to redirect
-        } 
-        else{
-          window.location.href = "/librarian/dashboard/home"; // guaranteed to redirect
+        if (user.role === "Librarian") {
+          window.location.href = "/librarian/dashboard/home";
+        } else if (user.role === "Admin") {
+          window.location.href = "/admin/dashboard/home";
+        } else {
+          window.location.href = "/staff/dashboard/home";
         }
       } else if (user.user_type === "member") {
-          window.location.href = "/member/dashboard/home"; // guaranteed to redirect
+        window.location.href = "/user/dashboard/home";
+      } else {
+        alert("Unknown user type. Please contact admin.");
       }
-
-
-
     } catch (error: any) {
       console.error("Login error:", error);
 
@@ -150,12 +145,9 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
           password: "Incorrect email or password",
         }));
       } else if (error.request) {
-        alert(
-          "Unable to connect to the server. Check your network and ensure the backend is running on port 5001."
-        );
+        alert("Cannot connect to API. Check your network or deployment.");
       } else {
-        console.error("Axios error:", error.message);
-        alert("Unexpected error occurred: " + error.message);
+        alert("Unexpected error: " + error.message);
       }
     } finally {
       setIsLoading(false);
@@ -168,6 +160,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     !formData.password ||
     formData.password.length < 6;
 
+  // --- Render ---
   return ReactDOM.createPortal(
     <div className={styles.modalOverlay}>
       <div className={styles.modalContent}>
@@ -176,13 +169,9 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
         </button>
 
         <div className={styles.modalBody}>
-          {/* Left side - Library Image */}
+          {/* LEFT IMAGE */}
           <div className={styles.imageSection}>
-            <img
-              src={libraryImage}
-              alt="Library"
-              className={styles.libraryImage}
-            />
+            <img src={libraryImage} alt="Library" className={styles.libraryImage} />
             <div className={styles.imageOverlay}>
               <h3 className={styles.welcomeText}>Welcome to</h3>
               <h2 className={styles.libraryTitle}>LibraX</h2>
@@ -190,16 +179,15 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Right side - Login Form */}
+          {/* RIGHT FORM */}
           <div className={styles.formSection}>
             <h2 className={styles.modalTitle}>Login</h2>
 
             <form onSubmit={handleSubmit} className={styles.modalLoginForm}>
+              {/* EMAIL */}
               <div className={styles.formGroup}>
                 <label>Email:</label>
-                {errors.email && (
-                  <div className={styles.formError}>{errors.email}</div>
-                )}
+                {errors.email && <div className={styles.formError}>{errors.email}</div>}
                 <input
                   ref={emailInputRef}
                   type="email"
@@ -210,13 +198,10 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
                   onBlur={handleEmailBlur}
                   disabled={isLoading}
                 />
-                {checkingEmail && (
-                  <small style={{ color: "#666" }}>
-                    Checking email existence...
-                  </small>
-                )}
+                {checkingEmail && <small>Checking email existence...</small>}
               </div>
 
+              {/* PASSWORD */}
               <div className={styles.formGroup}>
                 <label>Password:</label>
                 {errors.password && (
@@ -242,6 +227,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
                 </div>
               </div>
 
+              {/* SUBMIT BUTTON */}
               <button
                 type="submit"
                 className={styles.btnPrimary}
@@ -249,8 +235,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
               >
                 {isLoading ? (
                   <span className={styles.loadingSpinner}>
-                    <Loader2 size={16} className={styles.animateSpin} /> Signing
-                    In...
+                    <Loader2 size={16} className={styles.animateSpin} /> Signing In...
                   </span>
                 ) : (
                   "Login"

@@ -1,0 +1,84 @@
+/* Custom MUJI Color Palette */
+:root {
+  --muji-red: #6d1f25;    /* Deep MUJI red */
+  --muji-brown: #7d5a44;  /* Muted brown */
+  --muji-grey: #bfb8af;   /* Soft warm grey */
+  --muji-ivory: #f5f3ee;  /* Off-white ivory */
+  --muji-dark: #1f1f1f;   /* Charcoal for text */
+  --muji-light-grey: #e8e5e0; /* Very light warm grey */
+}
+
+/* Layout container for the entire page */
+.page-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--muji-ivory); /* MUJI off-white background */
+  color: var(--muji-dark); /* MUJI charcoal text */
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Main content area that adjusts to remaining space */
+.main-content {
+  flex: 1;
+  margin-left: 0; /* Let flexbox handle the spacing */
+  padding: 24px;
+  background-color: #faf8f5; /* slightly warmer MUJI white */
+  overflow-y: auto;
+  min-height: 100vh; /* Allow natural scrolling */
+  transition: margin-left 0.3s ease, background-color 0.3s ease;
+}
+
+/* Container styles */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  background-color: #ffffff; /* clean white card */
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); /* subtle MUJI shadow */
+}
+
+/* Heading styles */
+.heading {
+  font-size: 2.25rem;
+  font-weight: 600;
+  color: var(--muji-brown); /* MUJI muted brown for headings */
+  margin-bottom: 24px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* Title header styles */
+.title-header {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--muji-red); /* MUJI red for main titles */
+  margin-bottom: 24px;
+  text-align: left;
+  letter-spacing: 0.5px;
+}
+/* Introductory message for the dashboard */
+.intro-message {
+  background-color: var(--muji-light-grey); /* subtle warm grey card */
+  border-left: 4px solid var(--muji-red);   /* accent MUJI red */
+  padding: 20px 24px;
+  margin-bottom: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.intro-message h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--muji-brown);
+  margin-bottom: 8px;
+}
+
+.intro-message p {
+  font-size: 1rem;
+  color: var(--muji-dark);
+  line-height: 1.6;
+  margin: 0;
+}
