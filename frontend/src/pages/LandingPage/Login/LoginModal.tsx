@@ -132,11 +132,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
       if (user.user_type === "staff") {
         if (user.role === "Librarian") {
           window.location.href = "/librarian/dashboard/home";
-        } else if (user.role === "Admin") {
-          window.location.href = "/admin/dashboard/home";
-        } else {
-          window.location.href = "/staff/dashboard/home";
-        }
+        } 
       } else if (user.user_type === "member") {
         window.location.href = "/user/dashboard/home";
       } else {
