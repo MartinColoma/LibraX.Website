@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import axios from "axios";
 import { Eye, EyeOff, Loader2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // ✅ Import
 import styles from "./LoginModal.module.css";
 import libraryImage from "../../../images/library_cover.png";
 
@@ -10,6 +11,8 @@ interface Props {
 }
 
 const LoginPage: React.FC<Props> = ({ onClose }) => {
+  const navigate = useNavigate(); // ✅ Hook
+
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
@@ -18,10 +21,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
 
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  /**
-   * ✅ Direct API base URL (no env var)
-   * Change this if you redeploy or move your API
-   */
   const API_BASE = "https://libra-x-api.vercel.app/api/login";
 
   const api = axios.create({
@@ -34,7 +33,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     emailInputRef.current?.focus();
   }, []);
 
-  // --- Validation ---
   const validateForm = () => {
     const newErrors = { email: "", password: "" };
     let isValid = true;
@@ -59,7 +57,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     return isValid;
   };
 
-  // --- Check if email exists ---
   const checkEmailExists = async (email: string) => {
     if (!email || errors.email) return;
     setCheckingEmail(true);
@@ -94,7 +91,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     checkEmailExists(formData.email.trim());
   };
 
-  // --- Handle Submit ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading || checkingEmail || !validateForm()) return;
@@ -103,14 +99,10 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      console.log("Attempting login:", formData.email);
-
       const response = await api.post(`/auth?path=login`, {
         email: formData.email.trim(),
         password: formData.password.trim(),
       });
-
-      console.log("Login response:", response.data);
 
       const user = response.data.user;
       if (!user) {
@@ -126,15 +118,13 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
       sessionStorage.setItem("user_role", user.role || "");
       sessionStorage.setItem("user_type", user.user_type || "");
 
-      console.log("User stored in sessionStorage");
-
-      // Redirect based on user_type + role
+      // ✅ Navigate instead of full reload
       if (user.user_type === "staff") {
         if (user.role === "Librarian") {
-          window.location.href = "/librarian/dashboard/home";
-        } 
+          navigate("/librarian/dashboard/home");
+        }
       } else if (user.user_type === "member") {
-        window.location.href = "/user/dashboard/home";
+        navigate("/user/dashboard/home");
       } else {
         alert("Unknown user type. Please contact admin.");
       }
@@ -164,7 +154,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     !formData.password ||
     formData.password.length < 6;
 
-  // --- Render ---
   return ReactDOM.createPortal(
     <div className={styles.modalOverlay}>
       <div className={styles.modalContent}>
@@ -173,7 +162,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
         </button>
 
         <div className={styles.modalBody}>
-          {/* LEFT IMAGE */}
           <div className={styles.imageSection}>
             <img src={libraryImage} alt="Library" className={styles.libraryImage} />
             <div className={styles.imageOverlay}>
@@ -183,12 +171,10 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
             </div>
           </div>
 
-          {/* RIGHT FORM */}
           <div className={styles.formSection}>
             <h2 className={styles.modalTitle}>Login</h2>
 
             <form onSubmit={handleSubmit} className={styles.modalLoginForm}>
-              {/* EMAIL */}
               <div className={styles.formGroup}>
                 <label>Email:</label>
                 {errors.email && <div className={styles.formError}>{errors.email}</div>}
@@ -205,12 +191,9 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
                 {checkingEmail && <small>Checking email existence...</small>}
               </div>
 
-              {/* PASSWORD */}
               <div className={styles.formGroup}>
                 <label>Password:</label>
-                {errors.password && (
-                  <div className={styles.formError}>{errors.password}</div>
-                )}
+                {errors.password && <div className={styles.formError}>{errors.password}</div>}
                 <div className={styles.passwordInputContainer}>
                   <input
                     type={showPassword ? "text" : "password"}
@@ -231,7 +214,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
                 </div>
               </div>
 
-              {/* SUBMIT BUTTON */}
               <button
                 type="submit"
                 className={styles.btnPrimary}
