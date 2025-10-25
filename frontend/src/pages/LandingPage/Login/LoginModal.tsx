@@ -22,7 +22,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
    * ✅ Direct API base URL (no env var)
    * Change this if you redeploy or move your API
    */
-  const API_BASE = "https://libra-x-api.vercel.app/api";
+  const API_BASE = "https://libra-x-api.vercel.app/api/login";
 
   const api = axios.create({
     baseURL: API_BASE,
