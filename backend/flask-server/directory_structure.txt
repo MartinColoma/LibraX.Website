@@ -3,17 +3,6 @@ LibraX
 │   ├── .env
 │   ├── .gitignore
 │   ├── README.md
-│   ├── api
-│   │   ├── local_postgre
-│   │   │   ├── db.js
-│   │   │   └── routes
-│   │   │       └── users.js
-│   │   ├── package-lock.json
-│   │   ├── package.json
-│   │   ├── server.js
-│   │   └── supa
-│   │       ├── register-user.js
-│   │       └── supa_db.js
 │   ├── eslint.config.js
 │   ├── index.html
 │   ├── package-lock.json
@@ -24,6 +13,7 @@ LibraX
 │   ├── src
 │   │   ├── App.css
 │   │   ├── App.tsx
+│   │   ├── AppRoute.tsx
 │   │   ├── AppRoutes.tsx
 │   │   ├── assets
 │   │   │   └── react.svg
@@ -36,7 +26,13 @@ LibraX
 │   │   ├── pages
 │   │   │   ├── Dashboard
 │   │   │   │   ├── Librarian
+│   │   │   │   │   └── Home
+│   │   │   │   │       ├── Dash_Home.css
+│   │   │   │   │       └── Dash_Home.tsx
 │   │   │   │   └── User
+│   │   │   │       └── Home
+│   │   │   │           ├── MD_Home.css
+│   │   │   │           └── MD_Home.tsx
 │   │   │   ├── LandingPage
 │   │   │   │   ├── Home
 │   │   │   │   │   ├── Home.css

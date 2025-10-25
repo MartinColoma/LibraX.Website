@@ -17,6 +17,23 @@ import LibHome from './pages/Dashboard/Librarian/Home/Dash_Home';
 import UserHome from './pages/Dashboard/User/Home/MD_Home';
 
 
+// ✅ New: Full-page LoginPage using the same LoginModal
+const LoginPage: React.FC = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        background: "#fff8f0",
+      }}
+    >
+      <LoginModal onClose={() => { window.history.back(); }} />
+    </div>
+  );
+};
+
 const AppRoutes: React.FC = () => {
   const location = useLocation();
 
@@ -29,6 +46,7 @@ const AppRoutes: React.FC = () => {
             <Routes location={background || location}>
                 <Route path='*' element={<PageNotFound />} />
                 <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginPage />} />
 
                 {/* librarian Page Routes */}
                 <Route path="/librarian/dashboard/home" element={<LibHome />} />
