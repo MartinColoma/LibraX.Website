@@ -44,11 +44,11 @@ const handleSubmit = async (e: React.FormEvent) => {
       alert(data.message);
       onClose();
     } else {
-      alert(data.message || "Failed to register user");
+      alert(data.message || "Failed to register user - if statement (submit - try statement)");
     }
   } catch (error) {
     console.error("❌ Failed to register user:", error);
-    alert("Failed to register user");
+    alert("Failed to register user - catch statement");
   }
 };
 
