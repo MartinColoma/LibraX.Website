@@ -15,7 +15,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     address: "",
     phone: "",
     idNumber: "",
-    email: ""
+    email: "",
   });
 
   const handleChange = (
@@ -60,11 +60,16 @@ const handleSubmit = async (e: React.FormEvent) => {
           <h2 className={styles.title}>Register New User Account</h2>
 
           <form className={styles.form} onSubmit={handleSubmit}>
-            {/* Membership Type (full width) */}
+            {/* Membership Type */}
             <div className={styles.row1}>
               <label>
                 Membership Type (Role):
-                <select name="role" value={form.role} onChange={handleChange} required>
+                <select
+                  name="role"
+                  value={form.role}
+                  onChange={handleChange}
+                  required
+                >
                   <option value="">Select Membership Type</option>
                   <option value="Student">Student</option>
                   <option value="Faculty">Faculty</option>
@@ -103,7 +108,12 @@ const handleSubmit = async (e: React.FormEvent) => {
             <div className={styles.row2}>
               <label>
                 Gender:
-                <select name="gender" value={form.gender} onChange={handleChange} required>
+                <select
+                  name="gender"
+                  value={form.gender}
+                  onChange={handleChange}
+                  required
+                >
                   <option value="">Select gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -173,7 +183,11 @@ const handleSubmit = async (e: React.FormEvent) => {
 
             {/* Buttons */}
             <div className={styles.actions}>
-              <button type="button" className={styles.cancelBtn} onClick={onClose}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={onClose}
+              >
                 Cancel
               </button>
               <button type="submit" className={styles.createBtn}>
@@ -182,21 +196,6 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
           </form>
         </div>
-
-        {/* Right: Account Preview */}
-        {/* <div className={styles.previewSection}>
-          <h3 className={styles.previewTitle}>Account Preview</h3>
-          <div className={styles.previewContent}>
-            <p><strong>Membership Type:</strong> {form.role || "—"}</p>
-            <p><strong>Full Name:</strong> {form.firstName} {form.lastName || "—"}</p>
-            <p><strong>Gender:</strong> {form.gender || "—"}</p>
-            <p><strong>Birthday:</strong> {form.birthday || "—"}</p>
-            <p><strong>Address:</strong> {form.address || "—"}</p>
-            <p><strong>Phone Number:</strong> {form.phone || "—"}</p>
-            <p><strong>Email:</strong> {form.email || "—"}</p>
-            <p><strong>ID Number:</strong> {form.idNumber || "—"}</p>
-          </div>
-        </div> */}
       </div>
     </div>
   );

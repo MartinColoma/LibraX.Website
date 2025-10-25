@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from 'react-router-dom';
 import ReactDOM from "react-dom";
 import axios from "axios";
 import { Eye, EyeOff, Loader2, X } from "lucide-react";
@@ -18,8 +17,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
   const [checkingEmail, setCheckingEmail] = useState(false);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
-  const location = useLocation();
+
 
   useEffect(() => {
     emailInputRef.current?.focus();
