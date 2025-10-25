@@ -24,32 +24,34 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    try {
-      // 👇 Dynamic base URL: works locally AND on Vercel
-      const baseUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-
-      const res = await fetch(`${baseUrl}/api/supa/register-user`, {
+  try {
+    const res = await fetch(
+      `https://${import.meta.env.VITE_API_BASE_URL}/api/LandingPage/registration`,
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
-      });
+      }
+    );
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message || "Registration failed");
-
-      console.log("Temporary password (debug only):", data.tempPassword);
+    if (res.ok) {
+      console.log("Temporary password (hidden use only):", data.tempPassword);
       alert(data.message);
       onClose();
-    } catch (error: any) {
-      console.error("❌ Registration error:", error);
-      alert("Failed to register user. Please try again later.");
+    } else {
+      alert(data.message || "Failed to register user");
     }
-  };
+  } catch (error) {
+    console.error("❌ Failed to register user:", error);
+    alert("Failed to register user");
+  }
+};
+
 
   return (
     <div className={styles.backdrop}>
