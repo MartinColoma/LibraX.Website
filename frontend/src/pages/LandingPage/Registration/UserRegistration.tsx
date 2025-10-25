@@ -24,31 +24,33 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    try {
-        const res = await fetch("http://localhost:3000/supa/register-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        
-        const data = await res.json();
+  try {
+    const res = await fetch(
+      `https://${import.meta.env.VITE_API_BASE_URL}/api/LandingPage/registration`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      }
+    );
 
-        if (res.ok) {
-        console.log("Temporary password (hidden use only):", data.tempPassword); // debug only
-        // 🧠 Optionally store in state for DB insertion later
-        // localStorage.setItem("tempPassword", data.tempPassword);
-        }
+    const data = await res.json();
 
-        alert(data.message);
-        onClose();
-    } catch (error) {
-        alert("Failed to register user");
-        console.error(error);
+    if (res.ok) {
+      console.log("Temporary password (hidden use only):", data.tempPassword);
+      alert(data.message);
+      onClose();
+    } else {
+      alert(data.message || "Failed to register user");
     }
-    };
+  } catch (error) {
+    console.error("❌ Failed to register user:", error);
+    alert("Failed to register user");
+  }
+};
 
 
   return (
