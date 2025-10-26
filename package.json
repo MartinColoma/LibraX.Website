@@ -25,6 +25,7 @@
     "nodemailer": "^7.0.10"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/nodemailer": "^7.0.3"
   }
 }
