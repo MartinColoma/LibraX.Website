@@ -1,0 +1,30 @@
+{
+  "name": "librax.website",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MartinColoma/LibraX.Website.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MartinColoma/LibraX.Website/issues"
+  },
+  "homepage": "https://github.com/MartinColoma/LibraX.Website#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.76.1",
+    "@vercel/node": "^2.3.0",
+    "bcryptjs": "^3.0.2",
+    "nodemailer": "^7.0.10"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.3"
+  }
+}
