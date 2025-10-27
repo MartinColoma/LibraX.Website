@@ -104,7 +104,7 @@ select {
   padding-right: 36px;
 }
 
-/* NFC Section - Theme Matched */
+/* NFC Section - CENTERED and THEME MATCHED */
 .nfcSection {
   padding: 16px;
   background: rgba(109, 31, 37, 0.05);
@@ -113,6 +113,8 @@ select {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  align-items: stretch;
+  text-align: center;
 }
 
 .nfcTitle {
@@ -120,6 +122,7 @@ select {
   font-size: 14px;
   font-weight: 700;
   margin: 0;
+  text-align: center;
 }
 
 .nfcInput {
@@ -141,6 +144,10 @@ select {
   font-weight: 600;
   font-size: 14px;
   transition: background 0.2s ease;
+  align-self: center;
+  width: fit-content;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 .nfcButton:hover {
@@ -157,6 +164,10 @@ select {
   font-weight: 600;
   font-size: 14px;
   transition: background 0.2s ease;
+  align-self: center;
+  width: fit-content;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 .nfcButtonStop:hover {
@@ -168,6 +179,7 @@ select {
   color: #b8860b;
   margin: 0;
   font-weight: 500;
+  text-align: center;
 }
 
 .nfcSuccess {
@@ -175,6 +187,7 @@ select {
   color: #27ae60;
   margin: 0;
   font-weight: 600;
+  text-align: center;
 }
 
 .nfcError {
@@ -182,6 +195,7 @@ select {
   color: #c0392b;
   margin: 0;
   font-weight: 600;
+  text-align: center;
 }
 
 .actions {
@@ -266,5 +280,10 @@ select {
 
   .title {
     font-size: 18px;
+  }
+
+  .nfcButton,
+  .nfcButtonStop {
+    width: 100%;
   }
 }
