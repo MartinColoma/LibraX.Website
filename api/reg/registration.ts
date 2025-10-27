@@ -1,395 +1,208 @@
-import React, { useState, useRef, useEffect } from "react";
-import styles from "./UserRegistration.module.css";
+import { VercelRequest, VercelResponse } from "@vercel/node";
+import { createClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer";
+import crypto from "crypto";
 
-interface Props {
-  onClose: () => void;
+// --- Supabase client ---
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// --- Helper: Generate User ID ---
+function generateUserId(role: string) {
+  const prefixMap: Record<string, string> = {
+    Student: "S",
+    Faculty: "F",
+    Librarian: "L",
+    Admin: "A",
+  };
+  const prefix = prefixMap[role] || "U";
+  const year = new Date().getFullYear();
+  const randomDigits = Math.floor(100000 + Math.random() * 900000);
+  return `${prefix}${year}${randomDigits}`;
 }
 
-const UserRegistration: React.FC<Props> = ({ onClose }) => {
-  const [form, setForm] = useState({
-    role: "",
-    firstName: "",
-    lastName: "",
-    gender: "",
-    birthday: "",
-    address: "",
-    phone: "",
-    idNumber: "",
-    email: "",
-    nfcUid: "",
-  });
+// --- Helper: Determine user_type from role ---
+function getUserType(role: string) {
+  const staffRoles = ["Librarian", "Admin"];
+  return staffRoles.includes(role) ? "staff" : "member";
+}
 
-  const [nfcSupported, setNfcSupported] = useState(false);
-  const [nfcReading, setNfcReading] = useState(false);
-  const [nfcMessage, setNfcMessage] = useState("");
-  const nfcAbortControllerRef = useRef<AbortController | null>(null);
-  const ndefReaderRef = useRef<any>(null);
+// --- CORS Handler ---
+function handleCors(req: VercelRequest, res: VercelResponse): boolean {
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "https://libra-x-website.vercel.app",
+  ];
 
-  // ✅ Check if device supports NFC
-  useEffect(() => {
-    const checkNFCSupport = async () => {
-      if ("NDEFReader" in window) {
-        try {
-          const permission = await navigator.permissions.query({
-            name: "nfc" as any,
-          });
-          setNfcSupported(permission.state !== "denied");
-          console.log("✅ NFC is supported on this device");
-        } catch (error) {
-          console.log("⚠️ NFC support check failed:", error);
-          setNfcSupported(false);
-        }
-      } else {
-        console.log("❌ NFC is not supported on this device");
-        setNfcSupported(false);
-      }
-    };
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
 
-    checkNFCSupport();
-  }, []);
-
-  // ✅ Start NFC reading - FIXED
-  const startNFCReading = async () => {
-    if (!nfcSupported) {
-      alert("NFC is not supported on this device. Please enter ID manually.");
-      return;
-    }
-
-    setNfcReading(true);
-    setNfcMessage("📱 Waiting for NFC tag... Please hold device near NFC tag");
-    nfcAbortControllerRef.current = new AbortController();
-
-    try {
-      const ndef = new (window as any).NDEFReader();
-      ndefReaderRef.current = ndef;
-
-      console.log("🔍 Starting NFC scan...");
-
-      // ✅ Set up event handlers BEFORE scanning
-      ndef.onreading = (event: any) => {
-        console.log("📖 NFC tag detected:", event);
-        const { message } = event;
-        let nfcData = "";
-
-        if (message && message.records) {
-          for (const record of message.records) {
-            console.log("Record type:", record.recordType);
-            console.log("Record data:", record.data);
-
-            if (record.recordType === "text") {
-              try {
-                const decoder = new TextDecoder();
-                nfcData = decoder.decode(record.data);
-                console.log("✅ Text record found:", nfcData);
-                break;
-              } catch (e) {
-                console.error("Error decoding text:", e);
-              }
-            } else if (record.recordType === "uri") {
-              try {
-                const decoder = new TextDecoder();
-                nfcData = decoder.decode(record.data);
-                console.log("✅ URI record found:", nfcData);
-                break;
-              } catch (e) {
-                console.error("Error decoding URI:", e);
-              }
-            }
-          }
-        }
-
-        // ✅ If no text/URI found, try to get raw ID
-        if (!nfcData && event.serialNumber) {
-          nfcData = event.serialNumber;
-          console.log("✅ Serial number found:", nfcData);
-        }
-
-        if (nfcData) {
-          console.log("✅ Final NFC UID:", nfcData);
-          setForm((prev) => {
-            const updated = { ...prev, nfcUid: nfcData };
-            console.log("Updated form:", updated);
-            return updated;
-          });
-          setNfcMessage(`✅ NFC tag read successfully: ${nfcData}`);
-          stopNFCReading();
-        } else {
-          setNfcMessage("⚠️ NFC tag read but no data found. Try again.");
-        }
-      };
-
-      ndef.onreadingerror = (error: any) => {
-        console.error("❌ NFC reading error:", error);
-        setNfcMessage("❌ Error reading NFC tag. Please try again.");
-      };
-
-      // ✅ Start scanning
-      await ndef.scan({ signal: nfcAbortControllerRef.current.signal });
-      console.log("✅ NFC scan started successfully");
-    } catch (error: any) {
-      console.error("NFC error:", error);
-      
-      if (error.name === "AbortError") {
-        setNfcMessage("⏹️ NFC reading cancelled");
-      } else if (error.name === "NotAllowedError") {
-        setNfcMessage("❌ NFC permission denied. Please enable NFC access in settings.");
-      } else if (error.name === "NotSupportedError") {
-        setNfcMessage("❌ NFC is not supported on this device.");
-        setNfcSupported(false);
-      } else if (error.name === "SecurityError") {
-        setNfcMessage("❌ NFC requires HTTPS. Please use a secure connection.");
-      } else {
-        setNfcMessage(`❌ Error: ${error.message || "Unknown NFC error"}`);
-      }
-      setNfcReading(false);
-    }
-  };
-
-  // ✅ Stop NFC reading
-  const stopNFCReading = () => {
-    console.log("🛑 Stopping NFC scan...");
-    if (nfcAbortControllerRef.current) {
-      nfcAbortControllerRef.current.abort();
-    }
-    setNfcReading(false);
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const res = await fetch(
-        "https://libra-x-website-api.vercel.app/api/reg/registration",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        }
-      );
-
-      const data = await res.json();
-
-      if (res.ok) {
-        console.log("✅ User registered successfully");
-        alert(data.message);
-        onClose();
-      } else {
-        alert(data.message || "Failed to register user");
-      }
-    } catch (error) {
-      console.error("❌ Failed to register user:", error);
-      alert("Failed to register user");
-    }
-  };
-
-  return (
-    <div className={styles.backdrop}>
-      <div className={styles.modal}>
-        <div className={styles.formSection}>
-          <h2 className={styles.title}>Register New User Account</h2>
-
-          <form className={styles.form} onSubmit={handleSubmit}>
-            {/* Membership Type */}
-            <div className={styles.row1}>
-              <label>
-                Membership Type (Role):
-                <select
-                  name="role"
-                  value={form.role}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Membership Type</option>
-                  <option value="Student">Student</option>
-                  <option value="Faculty">Faculty</option>
-                  <option value="Librarian">Librarian</option>
-                </select>
-              </label>
-            </div>
-
-            {/* First + Last Name */}
-            <div className={styles.row2}>
-              <label>
-                First Name:
-                <input
-                  name="firstName"
-                  type="text"
-                  placeholder="Enter first name"
-                  value={form.firstName}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-              <label>
-                Last Name:
-                <input
-                  name="lastName"
-                  type="text"
-                  placeholder="Enter last name"
-                  value={form.lastName}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-            </div>
-
-            {/* Gender + Birthday */}
-            <div className={styles.row2}>
-              <label>
-                Gender:
-                <select
-                  name="gender"
-                  value={form.gender}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
-              </label>
-              <label>
-                Birthday:
-                <input
-                  name="birthday"
-                  type="date"
-                  value={form.birthday}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-            </div>
-
-            {/* Address + Phone Number */}
-            <div className={styles.row2}>
-              <label>
-                Address:
-                <input
-                  name="address"
-                  type="text"
-                  placeholder="Enter address"
-                  value={form.address}
-                  onChange={handleChange}
-                />
-              </label>
-              <label>
-                Phone Number:
-                <input
-                  name="phone"
-                  type="text"
-                  placeholder="Enter phone number"
-                  value={form.phone}
-                  onChange={handleChange}
-                />
-              </label>
-            </div>
-
-            {/* Email + Student/Faculty ID */}
-            <div className={styles.row2}>
-              <label>
-                Email Address:
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Enter email address"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-              <label>
-                Student/Faculty ID:
-                <input
-                  name="idNumber"
-                  type="text"
-                  placeholder="Enter student/faculty ID"
-                  value={form.idNumber}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-            </div>
-
-            {/* ✅ NFC Section */}
-            {nfcSupported && (
-              <div
-                style={{
-                  padding: "15px",
-                  backgroundColor: "#f0f8ff",
-                  borderRadius: "8px",
-                  marginBottom: "15px",
-                  border: "2px solid #6d1f25",
-                }}
-              >
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  NFC Card UID (Optional):
-                  <input
-                    name="nfcUid"
-                    type="text"
-                    placeholder="Will be populated by NFC read"
-                    value={form.nfcUid}
-                    onChange={handleChange}
-                    style={{ 
-                      backgroundColor: form.nfcUid ? "#e8f5e9" : "#f5f5f5",
-                      borderColor: form.nfcUid ? "green" : "#ccc"
-                    }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={nfcReading ? stopNFCReading : startNFCReading}
-                  style={{
-                    padding: "10px 15px",
-                    backgroundColor: nfcReading ? "#d9534f" : "#6d1f25",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                    transition: "all 0.3s",
-                  }}
-                >
-                  {nfcReading ? "🛑 Stop NFC Reading" : "📱 Start NFC Reading"}
-                </button>
-                {nfcMessage && (
-                  <p
-                    style={{
-                      marginTop: "10px",
-                      fontSize: "14px",
-                      color: nfcMessage.includes("✅") ? "green" : nfcMessage.includes("⏹️") ? "orange" : "red",
-                      fontWeight: "bold"
-                    }}
-                  >
-                    {nfcMessage}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Buttons */}
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.cancelBtn}
-                onClick={onClose}
-              >
-                Cancel
-              </button>
-              <button type="submit" className={styles.createBtn}>
-                Create Account
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,OPTIONS,PATCH,DELETE,POST,PUT"
   );
-};
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization"
+  );
 
-export default UserRegistration;
+  if (req.method === "OPTIONS") {
+    res.writeHead(200, { "Content-Length": "0" });
+    res.end();
+    return true;
+  }
+
+  return false;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // --- CORS handling ---
+  if (handleCors(req, res)) return;
+
+  // --- Only POST allowed ---
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Method Not Allowed" });
+  }
+
+  try {
+    const {
+      role,
+      firstName,
+      lastName,
+      gender,
+      birthday,
+      address,
+      phone,
+      idNumber,
+      email,
+      nfcUid,
+    } = req.body;
+
+    if (!email || !role || !firstName || !lastName) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // --- Check if NFC UID already exists (if provided) ---
+    if (nfcUid) {
+      const { data: existingNFC, error: nfcCheckError } = await supabase
+        .from("users")
+        .select("user_id")
+        .eq("nfc_uid", nfcUid)
+        .single();
+
+      if (nfcCheckError && nfcCheckError.code !== "PGRST116") throw nfcCheckError;
+      if (existingNFC) {
+        return res.status(400).json({
+          message: "❌ NFC UID already registered. Please use a different card.",
+        });
+      }
+    }
+
+    // --- Check if email already exists ---
+    const { data: existingEmail, error: emailCheckError } = await supabase
+      .from("users")
+      .select("user_id")
+      .eq("email", email)
+      .single();
+
+    if (emailCheckError && emailCheckError.code !== "PGRST116")
+      throw emailCheckError;
+    if (existingEmail) {
+      return res.status(400).json({ message: "❌ Email already registered" });
+    }
+
+    // --- Generate IDs and Password ---
+    const userId = generateUserId(role);
+    const tempPassword = crypto.randomBytes(4).toString("hex");
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const userType = getUserType(role);
+
+    // --- Insert to Supabase ---
+    const { data, error } = await supabase
+      .from("users")
+      .insert([
+        {
+          user_id: userId,
+          user_type: userType,
+          role,
+          first_name: firstName,
+          last_name: lastName,
+          gender,
+          birthday,
+          address,
+          email,
+          phone_number: phone,
+          student_faculty_id: idNumber,
+          password_hash: passwordHash,
+          nfc_uid: nfcUid || null,
+          status: "Active",
+          date_registered: new Date().toISOString().split("T")[0],
+        },
+      ])
+      .select();
+
+    if (error) throw error;
+
+    // --- Email Setup ---
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
+    });
+
+    await transporter.sendMail({
+      from: `"LibraX Kiosk" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: "LibraX Registration - Temporary Password",
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #6d1f25;">LibraX Library Registration</h2>
+        <p>Hello <strong>${firstName} ${lastName}</strong>,</p>
+        <p>Thank you for registering for the <strong>LibraX Library System</strong>. Below are your submitted details:</p>
+        <table style="border-collapse: collapse; width: 100%; margin: 10px 0;">
+            <tbody>
+            <tr><td><strong>Membership Type:</strong></td><td>${role}</td></tr>
+            <tr><td><strong>Full Name:</strong></td><td>${firstName} ${lastName}</td></tr>
+            <tr><td><strong>Gender:</strong></td><td>${gender}</td></tr>
+            <tr><td><strong>Birthday:</strong></td><td>${birthday}</td></tr>
+            <tr><td><strong>Address:</strong></td><td>${address}</td></tr>
+            <tr><td><strong>Phone Number:</strong></td><td>${phone}</td></tr>
+            <tr><td><strong>Email Address:</strong></td><td>${email}</td></tr>
+            <tr><td><strong>Student/Faculty ID:</strong></td><td>${idNumber}</td></tr>
+            ${nfcUid ? `<tr><td><strong>NFC Card UID:</strong></td><td>${nfcUid}</td></tr>` : ""}
+            </tbody>
+        </table>
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #ccc;">
+        <p>Your temporary password is:</p>
+        <h2 style="color: #6d1f25; letter-spacing: 1px;">${tempPassword}</h2>
+        <p>Please wait for the administrator to approve your account.<br>
+        Once approved, you will be prompted to change your password on first login.</p>
+        <br>
+        <p style="font-size: 14px; color: #555;">
+            Regards,<br>
+            <strong>Martin - LibraX Library Team</strong><br>
+            <em>AIoT Library Kiosk</em>
+        </p>
+        </div>
+      `,
+    });
+
+    return res.status(200).json({
+      message: "✅ User registered successfully",
+      userId,
+      tempPassword,
+      data: data[0],
+    });
+  } catch (err: any) {
+    console.error("❌ Error inserting user:", err);
+    return res.status(500).json({
+      message: "❌ Failed to register user",
+      error: err.message,
+    });
+  }
+}
