@@ -22,7 +22,9 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcReading, setNfcReading] = useState(false);
   const [nfcMessage, setNfcMessage] = useState("");
+  const [usbNFCMode, setUsbNFCMode] = useState(false);
   const nfcAbortControllerRef = useRef<AbortController | null>(null);
+  const nfcInputRef = useRef<HTMLInputElement>(null);
   const ndefReaderRef = useRef<any>(null);
 
   // ✅ Check if device supports NFC
@@ -34,24 +36,40 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
             name: "nfc" as any,
           });
           setNfcSupported(permission.state !== "denied");
-          console.log("✅ NFC is supported on this device");
+          console.log("✅ Native NFC (Web NFC API) is supported");
+          setUsbNFCMode(false);
         } catch (error) {
-          console.log("⚠️ NFC support check failed:", error);
+          console.log("⚠️ Native NFC not supported, checking for USB NFC reader...");
           setNfcSupported(false);
+          setUsbNFCMode(true);
         }
       } else {
-        console.log("❌ NFC is not supported on this device");
-        setNfcSupported(false);
+        console.log("❌ Native NFC not supported, enabling USB NFC mode");
+        setUsbNFCMode(true);
       }
     };
 
     checkNFCSupport();
   }, []);
 
-  // ✅ Start NFC reading - FIXED
+  // ✅ Handle keyboard input from USB NFC reader
+  const handleNFCKeyboardInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // USB NFC readers typically end with Enter key
+    if (e.key === "Enter") {
+      const nfcData = (e.target as HTMLInputElement).value.trim();
+      if (nfcData) {
+        console.log("✅ USB NFC Reader detected UID:", nfcData);
+        setForm((prev) => ({ ...prev, nfcUid: nfcData }));
+        setNfcMessage(`✅ USB NFC Reader: ${nfcData}`);
+        (e.target as HTMLInputElement).value = ""; // Clear for next read
+      }
+    }
+  };
+
+  // ✅ Start native NFC reading - FIXED
   const startNFCReading = async () => {
     if (!nfcSupported) {
-      alert("NFC is not supported on this device. Please enter ID manually.");
+      alert("Native NFC is not supported. Using USB NFC Reader mode.");
       return;
     }
 
@@ -128,7 +146,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
       console.log("✅ NFC scan started successfully");
     } catch (error: any) {
       console.error("NFC error:", error);
-      
+
       if (error.name === "AbortError") {
         setNfcMessage("⏹️ NFC reading cancelled");
       } else if (error.name === "NotAllowedError") {
@@ -316,31 +334,45 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
               </label>
             </div>
 
-            {/* ✅ NFC Section */}
-            {nfcSupported && (
-              <div
-                style={{
-                  padding: "15px",
-                  backgroundColor: "#f0f8ff",
-                  borderRadius: "8px",
-                  marginBottom: "15px",
-                  border: "2px solid #6d1f25",
-                }}
-              >
-                <label style={{ display: "block", marginBottom: "10px" }}>
-                  NFC Card UID (Optional):
-                  <input
-                    name="nfcUid"
-                    type="text"
-                    placeholder="Will be populated by NFC read"
-                    value={form.nfcUid}
-                    onChange={handleChange}
-                    style={{ 
-                      backgroundColor: form.nfcUid ? "#e8f5e9" : "#f5f5f5",
-                      borderColor: form.nfcUid ? "green" : "#ccc"
-                    }}
-                  />
-                </label>
+            {/* ✅ NFC Section - Both Native and USB - READ-ONLY */}
+            <div
+              style={{
+                padding: "15px",
+                backgroundColor: "#f0f8ff",
+                borderRadius: "8px",
+                marginBottom: "15px",
+                border: "2px solid #6d1f25",
+              }}
+            >
+              <h3 style={{ marginTop: 0, color: "#6d1f25" }}>
+                {nfcSupported ? "📱 Native NFC" : "🖥️ USB NFC Reader"}
+              </h3>
+
+              <label style={{ display: "block", marginBottom: "10px" }}>
+                NFC Card UID (Optional):
+                <input
+                  ref={nfcInputRef}
+                  name="nfcUid"
+                  type="text"
+                  placeholder={
+                    usbNFCMode
+                      ? "Hold USB reader near card to scan"
+                      : "Will be populated by NFC read"
+                  }
+                  value={form.nfcUid}
+                  onChange={handleChange}
+                  onKeyDown={usbNFCMode ? handleNFCKeyboardInput : undefined}
+                  autoFocus={usbNFCMode}
+                  readOnly={true} // ✅ READ-ONLY
+                  style={{
+                    backgroundColor: form.nfcUid ? "#e8f5e9" : "#f5f5f5",
+                    borderColor: form.nfcUid ? "green" : "#ccc",
+                    cursor: "not-allowed", // ✅ Show not-allowed cursor
+                  }}
+                />
+              </label>
+
+              {nfcSupported && (
                 <button
                   type="button"
                   onClick={nfcReading ? stopNFCReading : startNFCReading}
@@ -357,20 +389,31 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
                 >
                   {nfcReading ? "🛑 Stop NFC Reading" : "📱 Start NFC Reading"}
                 </button>
-                {nfcMessage && (
-                  <p
-                    style={{
-                      marginTop: "10px",
-                      fontSize: "14px",
-                      color: nfcMessage.includes("✅") ? "green" : nfcMessage.includes("⏹️") ? "orange" : "red",
-                      fontWeight: "bold"
-                    }}
-                  >
-                    {nfcMessage}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
+
+              {usbNFCMode && !nfcSupported && (
+                <p style={{ color: "#FF9800", fontWeight: "bold" }}>
+                  💡 USB NFC Reader Mode: Position reader near card to scan
+                </p>
+              )}
+
+              {nfcMessage && (
+                <p
+                  style={{
+                    marginTop: "10px",
+                    fontSize: "14px",
+                    color: nfcMessage.includes("✅")
+                      ? "green"
+                      : nfcMessage.includes("⏹️")
+                        ? "orange"
+                        : "red",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {nfcMessage}
+                </p>
+              )}
+            </div>
 
             {/* Buttons */}
             <div className={styles.actions}>
