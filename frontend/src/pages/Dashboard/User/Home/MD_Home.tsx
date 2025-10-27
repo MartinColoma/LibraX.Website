@@ -8,22 +8,45 @@ const MemberDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const [memberName, setMemberName] = useState<string>("");
-  const [sessionTimeout, setSessionTimeout] = useState<ReturnType<typeof setTimeout> | null>(null); // ✅ FIXED
+  const [sessionTimeout, setSessionTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  // Function to handle logout
+  // ✅ Function to handle logout
   const handleSessionExpired = () => {
-    console.log("Session expired, logging out...");
+    console.log("🔒 Session expired, logging out...");
     
     // Clear all stored data
     localStorage.removeItem("auth_token");
     sessionStorage.clear();
     
-    // Show alert and redirect
-    alert("Your session has expired. Please log in again.");
+    // Redirect to login
     navigate("/login", { replace: true });
+    
+    // Optional: Show notification
+    alert("Your session has expired. Please log in again.");
   };
 
-  // Function to reset inactivity timer
+  // ✅ Function to check if token is expired
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      // Decode JWT payload (middle part)
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+
+      const payload = JSON.parse(atob(parts[1]));
+      const expirationTime = payload.exp * 1000; // Convert to milliseconds
+      const currentTime = Date.now();
+
+      const isExpired = currentTime > expirationTime;
+      console.log(`Token expiration check: Expired: ${isExpired}, Exp: ${new Date(expirationTime).toLocaleString()}, Now: ${new Date(currentTime).toLocaleString()}`);
+      
+      return isExpired;
+    } catch (error) {
+      console.error("Error checking token expiration:", error);
+      return true; // Treat as expired if error
+    }
+  };
+
+  // ✅ Function to reset inactivity timer (30 minutes)
   const resetInactivityTimer = () => {
     // Clear existing timer
     if (sessionTimeout) {
@@ -32,17 +55,20 @@ const MemberDashboard: React.FC = () => {
 
     // Set new timer - logout after 30 minutes of inactivity
     const timer = setTimeout(() => {
+      console.log("⏱️ Inactivity timeout reached");
       handleSessionExpired();
-    }, 30 * 60 * 1000); // 30 minutes in milliseconds
+    }, 30 * 60 * 1000); // 30 minutes
 
     setSessionTimeout(timer);
+    console.log("⏰ Inactivity timer reset (30 minutes)");
   };
 
-  // Setup inactivity listeners
+  // ✅ Setup main effect
   useEffect(() => {
     // Check if user is still logged in
     const userType = sessionStorage.getItem("user_type");
     if (userType !== "member") {
+      console.log("❌ Not a member, redirecting to login");
       navigate("/login", { replace: true });
       return;
     }
@@ -50,11 +76,13 @@ const MemberDashboard: React.FC = () => {
     const name = sessionStorage.getItem("user_name") || "Member";
     setMemberName(name);
 
+    console.log("✅ Member dashboard loaded");
+
     // Initialize inactivity timer
     resetInactivityTimer();
 
     // Add event listeners for user activity
-    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    const events = ["mousedown", "keydown", "scroll", "touchstart", "click"];
     
     events.forEach(event => {
       window.addEventListener(event, resetInactivityTimer);
@@ -72,38 +100,30 @@ const MemberDashboard: React.FC = () => {
     };
   }, [navigate]);
 
-  // Check token validity periodically
+  // ✅ Check token expiration every 1 minute
   useEffect(() => {
-    const checkTokenValidity = async () => {
+    const checkTokenExpiration = () => {
       const token = localStorage.getItem("auth_token");
 
       if (!token) {
+        console.log("❌ No token found");
         handleSessionExpired();
         return;
       }
 
-      try {
-        const response = await fetch(
-          "https://libra-x-website-api.vercel.app/api/verifytoken",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token }),
-            credentials: "include",
-          }
-        );
-
-        if (!response.ok || !(await response.json()).valid) {
-          handleSessionExpired();
-        }
-      } catch (error) {
-        console.error("Token check failed:", error);
+      // Check if token is expired
+      if (isTokenExpired(token)) {
+        console.log("⚠️ Token has expired");
         handleSessionExpired();
+        return;
       }
+
+      console.log("✅ Token is still valid");
     };
 
-    // Check token every 5 minutes
-    const tokenCheckInterval = setInterval(checkTokenValidity, 5 * 60 * 1000);
+    // Check token expiration immediately and then every 1 minute
+    checkTokenExpiration();
+    const tokenCheckInterval = setInterval(checkTokenExpiration, 1 * 60 * 1000); // Check every 1 minute
 
     return () => clearInterval(tokenCheckInterval);
   }, []);
