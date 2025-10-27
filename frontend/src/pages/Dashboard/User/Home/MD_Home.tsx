@@ -5,7 +5,7 @@ import "./MD_Home.css";
 import usePageMeta from '../../../../hooks/usePageMeta';
 
 const MemberDashboard: React.FC = () => {
-  usePageMeta("User Dashboard - Home", "/LibraX_Square_Logo_1.png");
+  usePageMeta("User Dashboard - Home", "LibraX Square Logo 1.png");
   const navigate = useNavigate();
   // const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
   //   sessionStorage.getItem("sidebarCollapsed") === "true"
