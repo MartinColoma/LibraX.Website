@@ -16,13 +16,14 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     phone: "",
     idNumber: "",
     email: "",
-    nfcUid: "", // ✅ NEW: Store NFC UID
+    nfcUid: "",
   });
 
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcReading, setNfcReading] = useState(false);
   const [nfcMessage, setNfcMessage] = useState("");
   const nfcAbortControllerRef = useRef<AbortController | null>(null);
+  const ndefReaderRef = useRef<any>(null);
 
   // ✅ Check if device supports NFC
   useEffect(() => {
@@ -47,7 +48,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     checkNFCSupport();
   }, []);
 
-  // ✅ Start NFC reading
+  // ✅ Start NFC reading - FIXED
   const startNFCReading = async () => {
     if (!nfcSupported) {
       alert("NFC is not supported on this device. Please enter ID manually.");
@@ -60,49 +61,85 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
     try {
       const ndef = new (window as any).NDEFReader();
-      
-      await ndef.scan({ signal: nfcAbortControllerRef.current.signal });
+      ndefReaderRef.current = ndef;
 
+      console.log("🔍 Starting NFC scan...");
+
+      // ✅ Set up event handlers BEFORE scanning
       ndef.onreading = (event: any) => {
+        console.log("📖 NFC tag detected:", event);
         const { message } = event;
         let nfcData = "";
 
-        for (const record of message.records) {
-          if (record.recordType === "text") {
-            const decoder = new TextDecoder();
-            nfcData = decoder.decode(record.data);
-            break;
-          } else if (record.recordType === "uri") {
-            const decoder = new TextDecoder();
-            nfcData = decoder.decode(record.data);
-            break;
+        if (message && message.records) {
+          for (const record of message.records) {
+            console.log("Record type:", record.recordType);
+            console.log("Record data:", record.data);
+
+            if (record.recordType === "text") {
+              try {
+                const decoder = new TextDecoder();
+                nfcData = decoder.decode(record.data);
+                console.log("✅ Text record found:", nfcData);
+                break;
+              } catch (e) {
+                console.error("Error decoding text:", e);
+              }
+            } else if (record.recordType === "uri") {
+              try {
+                const decoder = new TextDecoder();
+                nfcData = decoder.decode(record.data);
+                console.log("✅ URI record found:", nfcData);
+                break;
+              } catch (e) {
+                console.error("Error decoding URI:", e);
+              }
+            }
           }
         }
 
+        // ✅ If no text/URI found, try to get raw ID
+        if (!nfcData && event.serialNumber) {
+          nfcData = event.serialNumber;
+          console.log("✅ Serial number found:", nfcData);
+        }
+
         if (nfcData) {
-          console.log("✅ NFC tag read:", nfcData);
-          setForm((prev) => ({ ...prev, nfcUid: nfcData }));
+          console.log("✅ Final NFC UID:", nfcData);
+          setForm((prev) => {
+            const updated = { ...prev, nfcUid: nfcData };
+            console.log("Updated form:", updated);
+            return updated;
+          });
           setNfcMessage(`✅ NFC tag read successfully: ${nfcData}`);
-          setNfcReading(false);
           stopNFCReading();
+        } else {
+          setNfcMessage("⚠️ NFC tag read but no data found. Try again.");
         }
       };
 
-      ndef.onreadingerror = () => {
+      ndef.onreadingerror = (error: any) => {
+        console.error("❌ NFC reading error:", error);
         setNfcMessage("❌ Error reading NFC tag. Please try again.");
-        setNfcReading(false);
       };
+
+      // ✅ Start scanning
+      await ndef.scan({ signal: nfcAbortControllerRef.current.signal });
+      console.log("✅ NFC scan started successfully");
     } catch (error: any) {
+      console.error("NFC error:", error);
+      
       if (error.name === "AbortError") {
         setNfcMessage("⏹️ NFC reading cancelled");
       } else if (error.name === "NotAllowedError") {
-        setNfcMessage("❌ NFC permission denied. Please enable NFC access.");
+        setNfcMessage("❌ NFC permission denied. Please enable NFC access in settings.");
       } else if (error.name === "NotSupportedError") {
         setNfcMessage("❌ NFC is not supported on this device.");
         setNfcSupported(false);
+      } else if (error.name === "SecurityError") {
+        setNfcMessage("❌ NFC requires HTTPS. Please use a secure connection.");
       } else {
-        console.error("NFC error:", error);
-        setNfcMessage(`❌ Error: ${error.message}`);
+        setNfcMessage(`❌ Error: ${error.message || "Unknown NFC error"}`);
       }
       setNfcReading(false);
     }
@@ -110,11 +147,11 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
   // ✅ Stop NFC reading
   const stopNFCReading = () => {
+    console.log("🛑 Stopping NFC scan...");
     if (nfcAbortControllerRef.current) {
       nfcAbortControllerRef.current.abort();
-      setNfcReading(false);
-      setNfcMessage("");
     }
+    setNfcReading(false);
   };
 
   const handleChange = (
@@ -139,7 +176,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
       const data = await res.json();
 
       if (res.ok) {
-        console.log("Temporary password (hidden use only):", data.tempPassword);
+        console.log("✅ User registered successfully");
         alert(data.message);
         onClose();
       } else {
@@ -287,7 +324,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
                   backgroundColor: "#f0f8ff",
                   borderRadius: "8px",
                   marginBottom: "15px",
-                  border: "1px solid #6d1f25",
+                  border: "2px solid #6d1f25",
                 }}
               >
                 <label style={{ display: "block", marginBottom: "10px" }}>
@@ -298,8 +335,10 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
                     placeholder="Will be populated by NFC read"
                     value={form.nfcUid}
                     onChange={handleChange}
-                    readOnly
-                    style={{ backgroundColor: "#f5f5f5" }}
+                    style={{ 
+                      backgroundColor: form.nfcUid ? "#e8f5e9" : "#f5f5f5",
+                      borderColor: form.nfcUid ? "green" : "#ccc"
+                    }}
                   />
                 </label>
                 <button
@@ -313,6 +352,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
                     borderRadius: "4px",
                     cursor: "pointer",
                     fontWeight: "bold",
+                    transition: "all 0.3s",
                   }}
                 >
                   {nfcReading ? "🛑 Stop NFC Reading" : "📱 Start NFC Reading"}
@@ -322,7 +362,8 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
                     style={{
                       marginTop: "10px",
                       fontSize: "14px",
-                      color: nfcMessage.includes("✅") ? "green" : "orange",
+                      color: nfcMessage.includes("✅") ? "green" : nfcMessage.includes("⏹️") ? "orange" : "red",
+                      fontWeight: "bold"
                     }}
                   >
                     {nfcMessage}
