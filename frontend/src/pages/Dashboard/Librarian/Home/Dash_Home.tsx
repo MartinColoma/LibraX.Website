@@ -4,7 +4,7 @@ import './Dash_Home.css';
 import usePageMeta from '../../../../hooks/usePageMeta';
 
 const Dash_Home: React.FC = () => {
-  usePageMeta("Dashboard - Home", "HoKLibrary 128x128.png");
+  usePageMeta("Librarian Dashboard - Home", "LibraX Square Logo 1.png");
 
   // const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
   //   sessionStorage.getItem("sidebarCollapsed") === "true"

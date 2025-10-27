@@ -2,8 +2,10 @@ import React, { useEffect, useState } from "react";
 //import Sidebar from "../NavBar/Sidebar";
 import { useNavigate } from "react-router-dom";
 import "./MD_Home.css";
+import usePageMeta from '../../../../hooks/usePageMeta';
 
 const MemberDashboard: React.FC = () => {
+  usePageMeta("User Dashboard - Home", "LibraX Square Logo 1.png");
   const navigate = useNavigate();
   // const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
   //   sessionStorage.getItem("sidebarCollapsed") === "true"
