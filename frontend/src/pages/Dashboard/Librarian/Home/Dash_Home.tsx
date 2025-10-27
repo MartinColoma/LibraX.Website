@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import './Dash_Home.css';
-//import usePageMeta from '../../../../hooks/usePageMeta';
+import usePageMeta from '../../../../hooks/usePageMeta';
 
 const Dash_Home: React.FC = () => {
-  //usePageMeta("Librarian Dashboard - Home", "/LibraX Square Logo 1.png");
+  usePageMeta("Librarian Dashboard - Home", "/LibraX Square Logo 1.png");
 
   // const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
   //   sessionStorage.getItem("sidebarCollapsed") === "true"

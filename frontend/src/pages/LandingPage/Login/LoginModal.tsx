@@ -104,6 +104,8 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
         password: formData.password.trim(),
       });
 
+      console.log("Login Response:", response.data); // ✅ Debug log
+
       const { token, user } = response.data;
 
       if (!user || !token) {
@@ -114,7 +116,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
       // Store JWT token in localStorage
       localStorage.setItem("auth_token", token);
 
-      // Store user info in sessionStorage (optional, for quick access)
+      // Store user info in sessionStorage
       const displayName =
         user.full_name || user.username || user.email || "Unknown User";
 
@@ -123,18 +125,27 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
       sessionStorage.setItem("user_type", user.user_type || "");
       sessionStorage.setItem("user_id", user.user_id || "");
 
-      // Navigate based on user type
-      if (user.user_type === "staff") {
-        if (user.role === "Librarian") {
-          navigate("/librarian/dashboard/home");
-        }
-      } else if (user.user_type === "member") {
-        navigate("/user/dashboard/home");
-      } else {
-        alert("Unknown user type. Please contact admin.");
-      }
+      console.log("User data saved:", { user_type: user.user_type, role: user.role }); // ✅ Debug log
 
-      onClose(); // Close modal after successful login
+      // ✅ CRITICAL FIX: Don't close modal immediately, let navigation happen first
+      // Close modal and navigate
+      onClose();
+
+      // ✅ Use a small delay to ensure modal closes before navigation
+      setTimeout(() => {
+        if (user.user_type === "staff") {
+          if (user.role === "Librarian") {
+            console.log("Navigating to librarian dashboard");
+            navigate("/librarian/dashboard/home", { replace: true });
+          }
+        } else if (user.user_type === "member") {
+          console.log("Navigating to user dashboard");
+          navigate("/user/dashboard/home", { replace: true });
+        } else {
+          alert("Unknown user type. Please contact admin.");
+        }
+      }, 100); // Small delay for modal to close
+
     } catch (error: any) {
       console.error("Login error:", error);
 
