@@ -57,7 +57,7 @@ const MemberDashboard: React.FC = () => {
     const timer = setTimeout(() => {
       console.log("⏱️ Inactivity timeout reached");
       handleSessionExpired();
-    }, 30 * 60 * 1000); // 30 minutes
+    }, 30 * 1000); // 30 minutes
 
     setSessionTimeout(timer);
     console.log("⏰ Inactivity timer reset (30 minutes)");
