@@ -1,23 +1,23 @@
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-// pang modal itong line 4
-import { createPortal } from 'react-dom'; 
+import { createPortal } from 'react-dom';
 
-//Pages
+// Pages
 import PageNotFound from './pages/PageNotFound';
-import LandingPage from './pages/LandingPage/Home/Home'
+import LandingPage from './pages/LandingPage/Home/Home';
 import LoginModal from './pages/LandingPage/Login/LoginModal';
-import RegisterModal from './pages/LandingPage/Registration/UserRegistration'
+import RegisterModal from './pages/LandingPage/Registration/UserRegistration';
 
-
-//Import Librarian Pages
+// Import Librarian Pages
 import LibHome from './pages/Dashboard/Librarian/Home/Dash_Home';
 
-//Import User Pages
+// Import User Pages
 import UserHome from './pages/Dashboard/User/Home/MD_Home';
 
+// ✅ Import ProtectedRoute
+import ProtectedRoute from './components/ProtectedRoute';
 
-// ✅ New: Full-page LoginPage using the same LoginModal
+// Full-page LoginPage
 const LoginPage: React.FC = () => {
   return (
     <div
@@ -41,42 +41,58 @@ const AppRoutes: React.FC = () => {
   const state = location.state as { backgroundLocation?: Location };
   const background = state?.backgroundLocation;
   
-    return (
-        <>
-            <Routes location={background || location}>
-                <Route path='*' element={<PageNotFound />} />
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
+  return (
+    <>
+      <Routes location={background || location}>
+        <Route path='*' element={<PageNotFound />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
-                {/* librarian Page Routes */}
-                <Route path="/librarian/dashboard/home" element={<LibHome />} />
+        {/* ✅ Protected Librarian Routes */}
+        <Route
+          path="/librarian/dashboard/home"
+          element={
+            <ProtectedRoute 
+              allowedUserTypes={["staff"]} 
+              allowedRoles={["Librarian"]}
+            >
+              <LibHome />
+            </ProtectedRoute>
+          }
+        />
 
+        {/* ✅ Protected User Routes */}
+        <Route
+          path="/user/dashboard/home"
+          element={
+            <ProtectedRoute allowedUserTypes={["member"]}>
+              <UserHome />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
 
-                {/* User Page Routes */}
-                <Route path="/user/dashboard/home" element={<UserHome />} />
-
-            </Routes>
-            {/* modal pages */}
-            {background && (
-                <Routes>
-                    <Route
-                        path="/login"
-                        element={createPortal(
-                        <LoginModal onClose={() => window.history.back()} />,
-                        document.body
-                        )}
-                    />
-                    <Route
-                        path="/register"
-                        element={createPortal(
-                        <RegisterModal onClose={() => window.history.back()} />,
-                        document.body
-                        )}
-                    />
-                </Routes>
-                )}
-        </>
-    );
+      {/* Modal pages */}
+      {background && (
+        <Routes>
+          <Route
+            path="/login"
+            element={createPortal(
+              <LoginModal onClose={() => window.history.back()} />,
+              document.body
+            )}
+          />
+          <Route
+            path="/register"
+            element={createPortal(
+              <RegisterModal onClose={() => window.history.back()} />,
+              document.body
+            )}
+          />
+        </Routes>
+      )}
+    </>
+  );
 };
 
 export default AppRoutes;

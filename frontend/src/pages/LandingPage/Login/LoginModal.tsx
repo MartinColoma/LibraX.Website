@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import axios from "axios";
 import { Eye, EyeOff, Loader2, X } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // ✅ Import
+import { useNavigate } from "react-router-dom";
 import styles from "./LoginModal.module.css";
 import libraryImage from "../../../images/library_cover.png";
 
@@ -11,7 +11,7 @@ interface Props {
 }
 
 const LoginPage: React.FC<Props> = ({ onClose }) => {
-  const navigate = useNavigate(); // ✅ Hook
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({ email: "", password: "" });
@@ -104,21 +104,26 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
         password: formData.password.trim(),
       });
 
-      const user = response.data.user;
-      if (!user) {
+      const { token, user } = response.data;
+
+      if (!user || !token) {
         alert("Login failed: Invalid response from server");
         return;
       }
 
-      // Session storage
+      // Store JWT token in localStorage
+      localStorage.setItem("auth_token", token);
+
+      // Store user info in sessionStorage (optional, for quick access)
       const displayName =
         user.full_name || user.username || user.email || "Unknown User";
 
       sessionStorage.setItem("user_name", displayName);
       sessionStorage.setItem("user_role", user.role || "");
       sessionStorage.setItem("user_type", user.user_type || "");
+      sessionStorage.setItem("user_id", user.user_id || "");
 
-      // ✅ Navigate instead of full reload
+      // Navigate based on user type
       if (user.user_type === "staff") {
         if (user.role === "Librarian") {
           navigate("/librarian/dashboard/home");
@@ -128,6 +133,8 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
       } else {
         alert("Unknown user type. Please contact admin.");
       }
+
+      onClose(); // Close modal after successful login
     } catch (error: any) {
       console.error("Login error:", error);
 

@@ -1,30 +1,24 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
-/**
- * Initialize Supabase client with Service Role Key
- */
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-/**
- * Generate unique 10-digit login history ID
- */
+const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_EXPIRES_IN = "2m"; // 2mins for testing purposes
+
 function generateHistoryId(): string {
   return Math.floor(1000000000 + Math.random() * 9000000000).toString();
 }
 
-/**
- * Robust CORS handler for Vercel Functions
- * Supports preflight requests and multiple origins
- */
 function handleCors(req: VercelRequest, res: VercelResponse): boolean {
   const allowedOrigins = [
-    "http://localhost:5173", // for local dev (Vite default)
-    "https://libra-x-website.vercel.app", // production frontend
+    "http://localhost:5173",
+    "https://libra-x-website.vercel.app",
   ];
 
   const origin = req.headers.origin;
@@ -42,7 +36,6 @@ function handleCors(req: VercelRequest, res: VercelResponse): boolean {
     "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization"
   );
 
-  // Handle preflight
   if (req.method === "OPTIONS") {
     res.writeHead(200, { "Content-Length": "0" });
     res.end();
@@ -53,23 +46,28 @@ function handleCors(req: VercelRequest, res: VercelResponse): boolean {
 }
 
 /**
- * Auth API Endpoint
- * Supports:
- *   - POST ?path=login
- *   - POST ?path=logout
- *   - GET ?path=check-email
+ * Generate JWT Token
  */
+function generateToken(user: any): string {
+  const payload = {
+    userId: user.user_id,
+    email: user.email,
+    userType: user.user_type,
+    role: user.role,
+    fullName: `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim(),
+  };
+
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Always handle CORS first
   if (handleCors(req, res)) return;
 
   const { path } = req.query;
 
   try {
     /**
-     * ---------------------------
      * LOGIN
-     * ---------------------------
      */
     if (req.method === "POST" && path === "login") {
       const { email, password } = req.body;
@@ -123,30 +121,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       ]);
 
+      // Generate JWT token
+      const token = generateToken(user);
+
       // Clean user object before sending back
       delete user.password_hash;
       user.full_name = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
 
       return res.status(200).json({
         message: "✅ Login successful",
+        token, // JWT token
         user,
         login_history_id: historyId,
       });
     }
 
     /**
-     * ---------------------------
      * LOGOUT
-     * ---------------------------
      */
     if (req.method === "POST" && path === "logout") {
+      // With JWT, logout is handled client-side by removing the token
       return res.status(200).json({ message: "✅ Logged out successfully" });
     }
 
     /**
-     * ---------------------------
      * CHECK EMAIL EXISTENCE
-     * ---------------------------
      */
     if (req.method === "GET" && path === "check-email") {
       const email = req.query.email as string;
@@ -163,11 +162,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ exists: data.length > 0 });
     }
 
-    /**
-     * ---------------------------
-     * Fallback
-     * ---------------------------
-     */
     return res.status(405).json({ message: "Method or path not allowed" });
   } catch (err: any) {
     console.error("❌ Auth API error:", err);
