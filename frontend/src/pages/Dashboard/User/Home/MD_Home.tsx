@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./MD_Home.css";
 import usePageMeta from '../../../../hooks/usePageMeta';
@@ -8,64 +8,56 @@ const MemberDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const [memberName, setMemberName] = useState<string>("");
-  const [sessionTimeout, setSessionTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // ✅ Use ref instead of state
 
   // ✅ Function to handle logout
   const handleSessionExpired = () => {
     console.log("🔒 Session expired, logging out...");
     
-    // Clear all stored data
     localStorage.removeItem("auth_token");
     sessionStorage.clear();
     
-    // Redirect to login
-    navigate("/login", { replace: true });
+    setShowSessionExpiredModal(true);
     
-    // Optional: Show notification
-    alert("Your session has expired. Please log in again.");
+    setTimeout(() => {
+      navigate("/login", { replace: true });
+    }, 2000);
   };
 
   // ✅ Function to check if token is expired
   const isTokenExpired = (token: string): boolean => {
     try {
-      // Decode JWT payload (middle part)
       const parts = token.split('.');
       if (parts.length !== 3) return true;
 
       const payload = JSON.parse(atob(parts[1]));
-      const expirationTime = payload.exp * 1000; // Convert to milliseconds
+      const expirationTime = payload.exp * 1000;
       const currentTime = Date.now();
 
-      const isExpired = currentTime > expirationTime;
-      console.log(`Token expiration check: Expired: ${isExpired}, Exp: ${new Date(expirationTime).toLocaleString()}, Now: ${new Date(currentTime).toLocaleString()}`);
-      
-      return isExpired;
+      return currentTime > expirationTime;
     } catch (error) {
       console.error("Error checking token expiration:", error);
-      return true; // Treat as expired if error
+      return true;
     }
   };
 
-  // ✅ Function to reset inactivity timer (30 minutes)
+  // ✅ Function to reset inactivity timer
   const resetInactivityTimer = () => {
-    // Clear existing timer
-    if (sessionTimeout) {
-      clearTimeout(sessionTimeout);
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current);
     }
 
-    // Set new timer - logout after 30 minutes of inactivity
     const timer = setTimeout(() => {
       console.log("⏱️ Inactivity timeout reached");
       handleSessionExpired();
-    }, 30 * 1000); // 30 minutes
+    }, 30 * 1000); // 30 seconds
 
-    setSessionTimeout(timer);
-    console.log("⏰ Inactivity timer reset (30 minutes)");
+    sessionTimeoutRef.current = timer;
   };
 
-  // ✅ Setup main effect
+  // ✅ Setup inactivity detection - ONLY on mount
   useEffect(() => {
-    // Check if user is still logged in
     const userType = sessionStorage.getItem("user_type");
     if (userType !== "member") {
       console.log("❌ Not a member, redirecting to login");
@@ -78,29 +70,29 @@ const MemberDashboard: React.FC = () => {
 
     console.log("✅ Member dashboard loaded");
 
-    // Initialize inactivity timer
+    // Initialize timer
     resetInactivityTimer();
 
-    // Add event listeners for user activity
-    const events = ["mousedown", "keydown", "scroll", "touchstart", "click"];
+    // Add event listeners
+    const events = ["mousedown", "keydown", "scroll", "touchstart", "click", "mousemove"];
     
     events.forEach(event => {
-      window.addEventListener(event, resetInactivityTimer);
+      document.addEventListener(event, resetInactivityTimer, true);
     });
 
-    // Cleanup function
+    // Cleanup
     return () => {
       events.forEach(event => {
-        window.removeEventListener(event, resetInactivityTimer);
+        document.removeEventListener(event, resetInactivityTimer, true);
       });
       
-      if (sessionTimeout) {
-        clearTimeout(sessionTimeout);
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
       }
     };
-  }, [navigate]);
+  }, [navigate]); // ✅ Only navigate and usePageMeta in dependency
 
-  // ✅ Check token expiration every 1 minute
+  // ✅ Check token expiration periodically - SEPARATE effect
   useEffect(() => {
     const checkTokenExpiration = () => {
       const token = localStorage.getItem("auth_token");
@@ -111,7 +103,6 @@ const MemberDashboard: React.FC = () => {
         return;
       }
 
-      // Check if token is expired
       if (isTokenExpired(token)) {
         console.log("⚠️ Token has expired");
         handleSessionExpired();
@@ -121,14 +112,12 @@ const MemberDashboard: React.FC = () => {
       console.log("✅ Token is still valid");
     };
 
-    // Check token expiration immediately and then every 1 minute
     checkTokenExpiration();
-    const tokenCheckInterval = setInterval(checkTokenExpiration, 1 * 60 * 1000); // Check every 1 minute
+    const tokenCheckInterval = setInterval(checkTokenExpiration, 1 * 60 * 1000);
 
     return () => clearInterval(tokenCheckInterval);
-  }, []);
+  }, []); // ✅ Empty dependency array - runs once
 
-  // Optional: greeting based on time
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good Morning";
@@ -138,6 +127,32 @@ const MemberDashboard: React.FC = () => {
 
   return (
     <div className="page-layout">
+      {showSessionExpiredModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999
+        }}>
+          <div style={{
+            background: "white",
+            padding: "30px",
+            borderRadius: "8px",
+            textAlign: "center",
+            boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+          }}>
+            <h2>Session Expired</h2>
+            <p>Your session has expired. Redirecting to login...</p>
+          </div>
+        </div>
+      )}
+
       <main className="main-content">
         <div className="dashboard-container">
           <div className="welcome-card">
@@ -147,7 +162,6 @@ const MemberDashboard: React.FC = () => {
             <p>Welcome to your library dashboard. Explore resources, check your reservations, and stay updated with library news.</p>
           </div>
 
-          {/* Placeholder for future member features */}
           <div className="features-grid">
             <div className="feature-card">
               <h3>My Books</h3>

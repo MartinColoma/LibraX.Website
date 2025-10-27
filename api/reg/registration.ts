@@ -1,4 +1,3 @@
-// /api/register-user.ts
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
@@ -31,13 +30,19 @@ function getUserType(role: string) {
   return staffRoles.includes(role) ? "staff" : "member";
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // --- CORS headers ---
+// --- CORS Handler ---
+function handleCors(req: VercelRequest, res: VercelResponse): boolean {
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "https://libra-x-website.vercel.app",
+  ];
+
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "https://libra-x-website.vercel.app"
-  );
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET,OPTIONS,PATCH,DELETE,POST,PUT"
@@ -48,9 +53,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   );
 
   if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
+    res.writeHead(200, { "Content-Length": "0" });
+    res.end();
+    return true;
   }
+
+  return false;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // --- CORS handling ---
+  if (handleCors(req, res)) return;
 
   // --- Only POST allowed ---
   if (req.method !== "POST") {
@@ -68,10 +81,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       phone,
       idNumber,
       email,
+      nfcUid, // ✅ NEW: Accept NFC UID
     } = req.body;
 
     if (!email || !role || !firstName || !lastName) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // --- Check if NFC UID already exists (if provided) ---
+    if (nfcUid) {
+      const { data: existingNFC, error: nfcCheckError } = await supabase
+        .from("users")
+        .select("user_id")
+        .eq("nfc_uid", nfcUid)
+        .single();
+
+      if (nfcCheckError && nfcCheckError.code !== "PGRST116") throw nfcCheckError;
+      if (existingNFC) {
+        return res.status(400).json({
+          message: "❌ NFC UID already registered. Please use a different card.",
+        });
+      }
+    }
+
+    // --- Check if email already exists ---
+    const { data: existingEmail, error: emailCheckError } = await supabase
+      .from("users")
+      .select("user_id")
+      .eq("email", email)
+      .single();
+
+    if (emailCheckError && emailCheckError.code !== "PGRST116")
+      throw emailCheckError;
+    if (existingEmail) {
+      return res.status(400).json({ message: "❌ Email already registered" });
     }
 
     // --- Generate IDs and Password ---
@@ -97,6 +140,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           phone_number: phone,
           student_faculty_id: idNumber,
           password_hash: passwordHash,
+          nfc_uid: nfcUid || null, // ✅ NEW: Store NFC UID
           status: "Active",
           date_registered: new Date().toISOString().split("T")[0],
         },
@@ -130,6 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             <tr><td><strong>Phone Number:</strong></td><td>${phone}</td></tr>
             <tr><td><strong>Email Address:</strong></td><td>${email}</td></tr>
             <tr><td><strong>Student/Faculty ID:</strong></td><td>${idNumber}</td></tr>
+            ${nfcUid ? `<tr><td><strong>NFC Card UID:</strong></td><td>${nfcUid}</td></tr>` : ""}
             </tbody>
         </table>
         <hr style="margin: 20px 0; border: none; border-top: 1px solid #ccc;">
