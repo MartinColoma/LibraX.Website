@@ -1,3 +1,4 @@
+// src/AppRoutes.tsx
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -14,7 +15,7 @@ import LibHome from './pages/Dashboard/Librarian/Home/Dash_Home';
 // Import User Pages
 import UserHome from './pages/Dashboard/User/Home/MD_Home';
 
-// ✅ Import ProtectedRoute
+// Import ProtectedRoute
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Full-page LoginPage
@@ -40,7 +41,7 @@ const AppRoutes: React.FC = () => {
   // @ts-ignore
   const state = location.state as { backgroundLocation?: Location };
   const background = state?.backgroundLocation;
-  
+
   return (
     <>
       <Routes location={background || location}>
@@ -48,7 +49,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
 
-        {/* ✅ Protected Librarian Routes */}
+        {/* Protected Librarian Routes */}
         <Route
           path="/librarian/dashboard/home"
           element={
@@ -61,7 +62,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* ✅ Protected User Routes */}
+        {/* Protected User Routes */}
         <Route
           path="/user/dashboard/home"
           element={
