@@ -9,12 +9,8 @@ const authRoutes = require("./routes/auth");
 const registrationRoutes = require("./routes/registration");
 const verifyTokenRoutes = require("./routes/verify-token");
 
-app.use(express.static(path.join(__dirname, "dist"))); 
-
-
 // ===== STATIC FILES =====
-app.use(express.static(path.join(__dirname, "dist"))); 
-
+app.use(express.static(path.join(__dirname, "..", "dist")));
 // ===== MIDDLEWARE =====
 app.use(express.json());
 app.use(
@@ -40,7 +36,7 @@ verifyTokenRoutes(app);
 // ===== SPA CATCH-ALL ROUTE =====
 // This should be placed AFTER all API routes, BEFORE error handling
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+  res.sendFile(path.join(__dirname, "..", "dist", "index.html"));
 });
 
 // ===== ERROR HANDLING =====
