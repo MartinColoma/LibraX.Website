@@ -173,7 +173,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
     try {
       const res = await fetch(
-        "https://libra-x-website-api.vercel.app/api/reg/registration",
+        "https://librax-website-frontend.onrender.com/api/reg/registration",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

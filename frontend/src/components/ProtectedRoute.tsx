@@ -29,7 +29,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
       try {
         const response = await axios.post(
-          "https://libra-x-website-api.vercel.app/api/verifytoken/verifytoken",
+          "https://librax-website-frontend.onrender.com/api/verifytoken/verifytoken",
           { token },
           { withCredentials: true }
         );

@@ -21,7 +21,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
 
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  const API_BASE = "https://libra-x-website-api.vercel.app/api/login";
+  const API_BASE = "https://librax-website-frontend.onrender.com/api/login";
 
   const api = axios.create({
     baseURL: API_BASE,
