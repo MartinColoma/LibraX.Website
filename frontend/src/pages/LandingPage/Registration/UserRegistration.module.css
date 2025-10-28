@@ -113,9 +113,11 @@ select {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  align-items: stretch;
+  align-items: center; /* Changed from stretch to center */
+  justify-content: center; /* Added for vertical centering if needed */
   text-align: center;
 }
+
 
 .nfcTitle {
   color: var(--red);
