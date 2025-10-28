@@ -101,18 +101,20 @@ module.exports = function registrationRoutes(app) {
         .select();
 
       if (error) throw error;
-
-      // Send registration email
-      // Send registration email
+      
+      //send email with nodemailer
     const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // Use SSL
+    port: 587,
+    secure: false, // TLS
     auth: {
         user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS, // Use App Password if 2FA enabled
+        pass: process.env.GMAIL_PASS,
     },
-    connectionTimeout: 10000, // 10-second timeout
+    tls: {
+        rejectUnauthorized: false,
+    },
+    connectionTimeout: 10000,
     debug: true,
     logger: true,
     });
