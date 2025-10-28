@@ -21,7 +21,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
 
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  const API_BASE = "https://librax-website-frontend.onrender.com/api/login";
+  const API_BASE = "https://librax-website-frontend.onrender.com/api/login/auth";
 
   const api = axios.create({
     baseURL: API_BASE,

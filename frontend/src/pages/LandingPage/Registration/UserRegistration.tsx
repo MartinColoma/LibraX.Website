@@ -173,7 +173,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
     try {
       const res = await fetch(
-        "https://librax-website-frontend.onrender.com/api/reg/registration",
+        "https://librax-website-frontend.onrender.com/api/auth/register",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -28,7 +28,7 @@ function generateToken(user) {
 
 const authRoutes = (app) => {
   // ===== LOGIN =====
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/login/login", async (req, res) => {
     try {
       const { email, password } = req.body;
 
