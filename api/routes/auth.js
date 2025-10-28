@@ -28,14 +28,12 @@ function generateToken(user) {
 
 const authRoutes = (app) => {
   // ===== LOGIN =====
-  app.post("/api/login/login", async (req, res) => {
+  app.post("/api/login", async (req, res) => {
     try {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        return res
-          .status(400)
-          .json({ error: "Email and password are required" });
+        return res.status(400).json({ error: "Email and password are required" });
       }
 
       // Find user by email
@@ -107,19 +105,17 @@ const authRoutes = (app) => {
   });
 
   // ===== LOGOUT =====
-  app.post("/api/auth/logout", (req, res) => {
+  app.post("/api/logout", (req, res) => {
     // With JWT, logout is handled client-side by removing the token
     return res.status(200).json({ message: "✅ Logged out successfully" });
   });
 
   // ===== CHECK EMAIL EXISTENCE =====
-  app.get("/api/auth/check-email", async (req, res) => {
+  app.get("/api/check-email", async (req, res) => {
     try {
       const email = req.query.email;
       if (!email)
-        return res
-          .status(400)
-          .json({ error: "Email query parameter required" });
+        return res.status(400).json({ error: "Email query parameter required" });
 
       const { data, error: checkErr } = await supabase
         .from("users")

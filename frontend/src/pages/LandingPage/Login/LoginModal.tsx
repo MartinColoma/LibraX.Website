@@ -21,7 +21,8 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
 
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  const API_BASE = "https://librax-website-frontend.onrender.com/api/login/auth";
+  // Set API_BASE to your backend API root URL
+  const API_BASE = "https://librax-website-frontend.onrender.com/api";
 
   const api = axios.create({
     baseURL: API_BASE,
@@ -62,8 +63,9 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     setCheckingEmail(true);
 
     try {
-      const response = await api.get(`/auth`, {
-        params: { path: "check-email", email },
+      // Adjust path according to your backend route (assuming GET /api/check-email?email=...)
+      const response = await api.get(`/check-email`, {
+        params: { email },
       });
 
       if (!response.data.exists) {
@@ -99,12 +101,13 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      const response = await api.post(`/auth?path=login`, {
+      // Adjust path according to your backend route (assuming POST /api/login)
+      const response = await api.post(`/login`, {
         email: formData.email.trim(),
         password: formData.password.trim(),
       });
 
-      console.log("Login Response:", response.data); // ✅ Debug log
+      console.log("Login Response:", response.data); // Debug log
 
       const { token, user } = response.data;
 
@@ -113,10 +116,8 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
         return;
       }
 
-      // Store JWT token in localStorage
       localStorage.setItem("auth_token", token);
 
-      // Store user info in sessionStorage
       const displayName =
         user.full_name || user.username || user.email || "Unknown User";
 
@@ -125,13 +126,13 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
       sessionStorage.setItem("user_type", user.user_type || "");
       sessionStorage.setItem("user_id", user.user_id || "");
 
-      console.log("User data saved:", { user_type: user.user_type, role: user.role }); // ✅ Debug log
+      console.log("User data saved:", {
+        user_type: user.user_type,
+        role: user.role,
+      });
 
-      // ✅ CRITICAL FIX: Don't close modal immediately, let navigation happen first
-      // Close modal and navigate
       onClose();
 
-      // ✅ Use a small delay to ensure modal closes before navigation
       setTimeout(() => {
         if (user.user_type === "staff") {
           if (user.role === "Librarian") {
@@ -144,8 +145,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
         } else {
           alert("Unknown user type. Please contact admin.");
         }
-      }, 100); // Small delay for modal to close
-
+      }, 100);
     } catch (error: any) {
       console.error("Login error:", error);
 

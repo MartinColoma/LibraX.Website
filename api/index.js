@@ -15,7 +15,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://libra-x-website.vercel.app",
-      "https://your-render-frontend.onrender.com", // Update this
+      "https://librax-website.onrender.com", // Update this
     ],
     credentials: true,
   })
