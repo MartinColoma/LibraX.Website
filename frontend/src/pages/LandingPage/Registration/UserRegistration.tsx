@@ -5,6 +5,9 @@ interface Props {
   onClose: () => void;
 }
 
+const [loading, setLoading] = useState(false);
+
+
 const UserRegistration: React.FC<Props> = ({ onClose }) => {
   const [form, setForm] = useState({
     role: "",
@@ -166,32 +169,42 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    const res = await fetch("https://librax-website-frontend.onrender.com/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const data = await res.json();
 
-    try {
-      const res = await fetch("https://librax-website-frontend.onrender.com/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert(data.message);
-        onClose();
-      } else {
-        alert(data.message || "Failed to register user");
-      }
-    } catch (error) {
-      alert("Failed to register user");
+    if (res.ok) {
+      alert(data.message);
+      onClose();
+    } else {
+      alert(data.message || "Failed to register user");
     }
-  };
+  } catch (error) {
+    alert("Failed to register user");
+  } finally {
+    setLoading(false);  // <- Add this line here
+  }
+};
+
 
   return (
     <div className={styles.backdrop}>
+        {loading && (
+    <div className={styles.loadingOverlay}>
+      {/* Optional: spinner */}
+    </div>
+  )}
+
+    <div className={styles.modal}></div>
+      
       <div className={styles.modal}>
         <div className={styles.formSection}>
           <h2 className={styles.title}>Register New User Account</h2>

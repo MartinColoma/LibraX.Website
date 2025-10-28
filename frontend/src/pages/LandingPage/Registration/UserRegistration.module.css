@@ -289,3 +289,16 @@ select {
     width: 100%;
   }
 }
+
+.loadingOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 9999; /* higher than modal */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: wait; /* show loading cursor */
+  pointer-events: all; /* block clicks */
+}
+
