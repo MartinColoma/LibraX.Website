@@ -23,11 +23,14 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
   const [nfcReading, setNfcReading] = useState(false);
   const [nfcMessage, setNfcMessage] = useState("");
   const [usbNFCDetected, setUsbNFCDetected] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
   const nfcAbortControllerRef = useRef<AbortController | null>(null);
   const nfcInputRef = useRef<HTMLInputElement>(null);
   const ndefReaderRef = useRef<any>(null);
 
-  // ✅ Check if device supports NFC
+  // Check NFC support and USB reader
   useEffect(() => {
     const checkNFCSupport = async () => {
       if ("NDEFReader" in window) {
@@ -51,9 +54,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     checkNFCSupport();
   }, []);
 
-  // ✅ Handle keyboard input from USB NFC reader
   const handleNFCKeyboardInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // USB NFC readers typically end with Enter key
     if (e.key === "Enter") {
       const nfcData = (e.target as HTMLInputElement).value.trim();
       if (nfcData) {
@@ -65,7 +66,6 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     }
   };
 
-  // ✅ Start native NFC reading
   const startNFCReading = async () => {
     if (!nfcSupported) {
       alert("Native NFC is not supported. Using USB NFC Reader mode.");
@@ -82,7 +82,6 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
       console.log("Starting NFC scan...");
 
-      // ✅ Set up event handlers BEFORE scanning
       ndef.onreading = (event: any) => {
         console.log("NFC tag detected:", event);
         const { message } = event;
@@ -153,7 +152,6 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     }
   };
 
-  // ✅ Stop NFC reading
   const stopNFCReading = () => {
     console.log("Stopping NFC scan...");
     if (nfcAbortControllerRef.current) {
@@ -170,6 +168,8 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccessMessage("");
+    setErrorMessage("");
 
     try {
       const res = await fetch(
@@ -185,14 +185,17 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
       if (res.ok) {
         console.log("User registered successfully");
-        alert(data.message);
-        onClose();
+        setSuccessMessage(data.message);
+        // Close modal after short delay
+        setTimeout(() => {
+          onClose();
+        }, 2000);
       } else {
-        alert(data.message || "Failed to register user");
+        setErrorMessage(data.message || "Failed to register user");
       }
     } catch (error) {
       console.error("Failed to register user:", error);
-      alert("Failed to register user");
+      setErrorMessage("Failed to register user");
     }
   };
 
@@ -201,6 +204,13 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
       <div className={styles.modal}>
         <div className={styles.formSection}>
           <h2 className={styles.title}>Register New User Account</h2>
+
+          {successMessage && (
+            <div className={styles.successMessage}>{successMessage}</div>
+          )}
+          {errorMessage && (
+            <div className={styles.errorMessage}>{errorMessage}</div>
+          )}
 
           <form className={styles.form} onSubmit={handleSubmit}>
             {/* Membership Type */}
