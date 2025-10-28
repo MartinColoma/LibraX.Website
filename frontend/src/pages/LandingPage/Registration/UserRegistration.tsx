@@ -5,9 +5,6 @@ interface Props {
   onClose: () => void;
 }
 
-const [loading, setLoading] = useState(false);
-
-
 const UserRegistration: React.FC<Props> = ({ onClose }) => {
   const [form, setForm] = useState({
     role: "",
@@ -22,6 +19,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     nfcUid: "",
   });
 
+  const [loading, setLoading] = useState(false);
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcReading, setNfcReading] = useState(false);
   const [nfcMessage, setNfcMessage] = useState("");
@@ -30,7 +28,6 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
   const nfcInputRef = useRef<HTMLInputElement>(null);
   const ndefReaderRef = useRef<any>(null);
 
-  // Check if device supports NFC
   useEffect(() => {
     const checkNFCSupport = async () => {
       if ("NDEFReader" in window) {
@@ -55,7 +52,6 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     checkNFCSupport();
   }, []);
 
-  // Handle keyboard input from USB NFC reader
   const handleNFCKeyboardInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       const nfcData = (e.target as HTMLInputElement).value.trim();
@@ -68,13 +64,11 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     }
   };
 
-  // Start NFC Reading
   const startNFCReading = async () => {
     if (!nfcSupported) {
       alert("Native NFC is not supported. Using USB NFC Reader mode.");
       return;
     }
-
     setNfcReading(true);
     setNfcMessage("📱 Waiting for NFC tag... Please hold device near NFC tag");
     nfcAbortControllerRef.current = new AbortController();
@@ -91,25 +85,14 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
 
         if (message && message.records) {
           for (const record of message.records) {
-            console.log("Record type:", record.recordType);
-            console.log("Record data:", record.data);
-            if (record.recordType === "text") {
+            if (record.recordType === "text" || record.recordType === "uri") {
               try {
                 const decoder = new TextDecoder();
                 nfcData = decoder.decode(record.data);
-                console.log("✅ Text record found:", nfcData);
+                console.log(`✅ ${record.recordType} record found:`, nfcData);
                 break;
               } catch (e) {
-                console.error("Error decoding text:", e);
-              }
-            } else if (record.recordType === "uri") {
-              try {
-                const decoder = new TextDecoder();
-                nfcData = decoder.decode(record.data);
-                console.log("✅ URI record found:", nfcData);
-                break;
-              } catch (e) {
-                console.error("Error decoding URI:", e);
+                console.error("Error decoding record:", e);
               }
             }
           }
@@ -121,7 +104,6 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
         }
 
         if (nfcData) {
-          console.log("✅ Final NFC UID:", nfcData);
           setForm((prev) => ({ ...prev, nfcUid: nfcData }));
           setNfcMessage(`✅ NFC tag read successfully: ${nfcData}`);
           stopNFCReading();
@@ -155,9 +137,7 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
     }
   };
 
-  // Stop NFC Reading
   const stopNFCReading = () => {
-    console.log("🛑 Stopping NFC scan...");
     if (nfcAbortControllerRef.current) {
       nfcAbortControllerRef.current.abort();
     }
@@ -169,48 +149,44 @@ const UserRegistration: React.FC<Props> = ({ onClose }) => {
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    const res = await fetch("https://librax-website-frontend.onrender.com/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
 
-    const data = await res.json();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("https://librax-website-frontend.onrender.com/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    if (res.ok) {
-      alert(data.message);
-      onClose();
-    } else {
-      alert(data.message || "Failed to register user");
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message);
+        onClose();
+      } else {
+        alert(data.message || "Failed to register user");
+      }
+    } catch (error) {
+      alert("Failed to register user");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    alert("Failed to register user");
-  } finally {
-    setLoading(false);  // <- Add this line here
-  }
-};
-
+  };
 
   return (
     <div className={styles.backdrop}>
-        {loading && (
-    <div className={styles.loadingOverlay}>
-      {/* Optional: spinner */}
-    </div>
-  )}
-
-    <div className={styles.modal}></div>
-      
+      {loading && (
+        <div className={styles.loadingOverlay}>
+          {/* Optional: place spinner or loading text here */}
+        </div>
+      )}
       <div className={styles.modal}>
         <div className={styles.formSection}>
           <h2 className={styles.title}>Register New User Account</h2>
 
           <form className={styles.form} onSubmit={handleSubmit}>
-            {/* Membership Type */}
             <div className={styles.row1}>
               <label>
                 Membership Type (Role):
@@ -228,7 +204,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </label>
             </div>
 
-            {/* Name Fields */}
             <div className={styles.row2}>
               <label>
                 First Name:
@@ -254,7 +229,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </label>
             </div>
 
-            {/* Gender + Birthday */}
             <div className={styles.row2}>
               <label>
                 Gender:
@@ -281,7 +255,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </label>
             </div>
 
-            {/* Address + Phone */}
             <div className={styles.row2}>
               <label>
                 Address:
@@ -305,7 +278,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </label>
             </div>
 
-            {/* Email + ID */}
             <div className={styles.row2}>
               <label>
                 Email Address:
@@ -331,24 +303,19 @@ const handleSubmit = async (e: React.FormEvent) => {
               </label>
             </div>
 
-            {/* NFC Section */}
             <div
-              style={{
-                padding: "15px",
-                backgroundColor: "#f0f8ff",
-                borderRadius: "8px",
-                marginBottom: "15px",
-                border: "2px solid #6d1f25",
-              }}
+              className={styles.nfcSection}
+              style={{ marginBottom: "15px", border: "2px solid var(--red)" }}
             >
-              <h3 style={{ marginTop: 0, color: "#6d1f25" }}>
+              <h3 className={styles.nfcTitle}>
                 {nfcSupported ? "📱 Native NFC" : "🖥️ USB NFC Reader"}
               </h3>
 
-              <label style={{ display: "block", marginBottom: "10px" }}>
+              <label>
                 NFC Card UID (Optional):
                 <input
                   ref={nfcInputRef}
+                  className={styles.nfcInput}
                   name="nfcUid"
                   type="text"
                   placeholder={
@@ -373,52 +340,35 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <button
                   type="button"
                   onClick={nfcReading ? stopNFCReading : startNFCReading}
-                  style={{
-                    padding: "10px 15px",
-                    backgroundColor: nfcReading ? "#d9534f" : "#6d1f25",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                    transition: "all 0.3s",
-                  }}
+                  className={nfcReading ? styles.nfcButtonStop : styles.nfcButton}
                 >
                   {nfcReading ? "🛑 Stop NFC Reading" : "📱 Start NFC Reading"}
                 </button>
               )}
 
               {usbNFCMode && !nfcSupported && (
-                <p style={{ color: "#FF9800", fontWeight: "bold" }}>
+                <p className={styles.nfcHint}>
                   💡 USB NFC Reader Mode: Position reader near card to scan
                 </p>
               )}
 
               {nfcMessage && (
                 <p
-                  style={{
-                    marginTop: "10px",
-                    fontSize: "14px",
-                    color: nfcMessage.includes("✅")
-                      ? "green"
+                  className={
+                    nfcMessage.includes("✅")
+                      ? styles.nfcSuccess
                       : nfcMessage.includes("⏹️")
-                        ? "orange"
-                        : "red",
-                    fontWeight: "bold",
-                  }}
+                      ? styles.nfcHint
+                      : styles.nfcError
+                  }
                 >
                   {nfcMessage}
                 </p>
               )}
             </div>
 
-            {/* Buttons */}
             <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.cancelBtn}
-                onClick={onClose}
-              >
+              <button type="button" className={styles.cancelBtn} onClick={onClose}>
                 Cancel
               </button>
               <button type="submit" className={styles.createBtn}>
