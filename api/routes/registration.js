@@ -103,10 +103,20 @@ module.exports = function registrationRoutes(app) {
       if (error) throw error;
 
       // Send registration email
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
-      });
+      // Send registration email
+    const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // Use SSL
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS, // Use App Password if 2FA enabled
+    },
+    connectionTimeout: 10000, // 10-second timeout
+    debug: true,
+    logger: true,
+    });
+
 
       await transporter.sendMail({
         from: `"LibraX Kiosk" <${process.env.GMAIL_USER}>`,

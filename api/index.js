@@ -14,7 +14,6 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://libra-x-website.vercel.app",
       "https://librax-website.onrender.com", // Update this
     ],
     credentials: true,
