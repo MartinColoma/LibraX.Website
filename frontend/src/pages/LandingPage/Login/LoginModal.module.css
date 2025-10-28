@@ -8,6 +8,22 @@
   z-index: 2000;
 }
 
+/* Loading overlay to block clicks */
+.loadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 9999; /* higher than modal */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: wait;
+  pointer-events: all; /* Block clicks underneath */
+}
+
 .modalContent {
   background: #fff8f0; /* light cream */
   color: #2d2d2d;

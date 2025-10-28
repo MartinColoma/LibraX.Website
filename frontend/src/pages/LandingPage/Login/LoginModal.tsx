@@ -63,7 +63,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     setCheckingEmail(true);
 
     try {
-      // Adjust path according to your backend route (assuming GET /api/check-email?email=...)
       const response = await api.get(`/check-email`, {
         params: { email },
       });
@@ -101,7 +100,6 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      // Adjust path according to your backend route (assuming POST /api/login)
       const response = await api.post(`/login`, {
         email: formData.email.trim(),
         password: formData.password.trim(),
@@ -167,15 +165,17 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
   };
 
   const isFormInvalid =
-    !formData.email ||
-    !!errors.email ||
-    !formData.password ||
-    formData.password.length < 6;
+    !formData.email || !!errors.email || !formData.password || formData.password.length < 6;
 
   return ReactDOM.createPortal(
     <div className={styles.modalOverlay}>
+      {(isLoading || checkingEmail) && (
+        <div className={styles.loadingOverlay}>
+          <Loader2 size={48} className={styles.animateSpin} />
+        </div>
+      )}
       <div className={styles.modalContent}>
-        <button className={styles.modalCloseBtn} onClick={onClose}>
+        <button className={styles.modalCloseBtn} onClick={onClose} disabled={isLoading}>
           <X size={18} />
         </button>
 
