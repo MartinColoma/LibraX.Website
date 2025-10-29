@@ -10,10 +10,12 @@ const supabase = createClient(
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "2m";
 
+// Generate a 10-digit history ID
 function generateHistoryId() {
   return Math.floor(1000000000 + Math.random() * 9000000000).toString();
 }
 
+// Create signed JWT
 function generateToken(user) {
   const payload = {
     userId: user.user_id,
@@ -33,7 +35,9 @@ const authRoutes = (app) => {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+        return res
+          .status(400)
+          .json({ error: "Email and password are required" });
       }
 
       // Find user by email
@@ -62,7 +66,7 @@ const authRoutes = (app) => {
         .update({ last_login: new Date().toISOString() })
         .eq("user_id", user.user_id);
 
-      // Insert login history
+      // Insert login history record
       const historyId = generateHistoryId();
       const ip =
         (Array.isArray(req.headers["x-forwarded-for"])
@@ -72,7 +76,7 @@ const authRoutes = (app) => {
         "Unknown";
       const userAgent = req.headers["user-agent"] || "Unknown";
 
-      await supabase.from("login_history").insert([
+      const { error: insertErr } = await supabase.from("login_history").insert([
         {
           history_id: historyId,
           user_id: user.user_id,
@@ -81,6 +85,8 @@ const authRoutes = (app) => {
           user_agent: userAgent,
         },
       ]);
+
+      if (insertErr) throw insertErr;
 
       // Generate JWT token
       const token = generateToken(user);
@@ -105,9 +111,50 @@ const authRoutes = (app) => {
   });
 
   // ===== LOGOUT =====
-  app.post("/api/logout", (req, res) => {
-    // With JWT, logout is handled client-side by removing the token
-    return res.status(200).json({ message: "✅ Logged out successfully" });
+  app.post("/api/logout", async (req, res) => {
+    try {
+      const { token, login_history_id } = req.body;
+
+      // Decode token to identify user (optional but helpful)
+      let decoded = null;
+      try {
+        decoded = token ? jwt.verify(token, JWT_SECRET) : null;
+      } catch (err) {
+        console.warn("⚠️ Invalid or expired token during logout");
+      }
+
+      if (!login_history_id) {
+        return res.status(400).json({
+          error: "Missing login_history_id. Cannot record logout time.",
+        });
+      }
+
+      // Update logout_time for the matching history record
+      const { error: updateErr } = await supabase
+        .from("login_history")
+        .update({ logout_time: new Date().toISOString() })
+        .eq("history_id", login_history_id);
+
+      if (updateErr) throw updateErr;
+
+      console.log(
+        `✅ Logout recorded for user ${
+          decoded?.email || "unknown"
+        } (history_id: ${login_history_id})`
+      );
+
+      return res.status(200).json({
+        message: "✅ Logged out successfully",
+        logout_recorded: true,
+        history_id: login_history_id,
+      });
+    } catch (err) {
+      console.error("❌ Logout error:", err);
+      return res.status(500).json({
+        message: "❌ Logout failed",
+        error: err.message || String(err),
+      });
+    }
   });
 
   // ===== CHECK EMAIL EXISTENCE =====
