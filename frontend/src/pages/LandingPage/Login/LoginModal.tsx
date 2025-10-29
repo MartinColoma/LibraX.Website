@@ -27,7 +27,7 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
   const api = axios.create({
     baseURL: API_BASE,
     withCredentials: true,
-    timeout: 10000,
+    timeout: 60000,
   });
 
   useEffect(() => {
