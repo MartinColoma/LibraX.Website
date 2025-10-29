@@ -10,6 +10,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import axios from "axios";
 import "./Sidebar.css";
 
 interface SidebarProps {
@@ -78,17 +79,38 @@ const MergedSidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
     { name: "Library News", path: "/member/dashboard/news", icon: <Bell size={18} /> },
   ];
 
-  // ✅ Session-safe logout logic (kept same as before)
+  // ✅ Integrated backend logout logic
   const handleLogout = async () => {
+    const API_BASE_URL ="https://librax-website-frontend.onrender.com/api";
+
     try {
       console.log("🔒 Logging out...");
+
+      const token = localStorage.getItem("auth_token");
+      const loginHistoryId = sessionStorage.getItem("login_history_id");
+
+      if (token && loginHistoryId) {
+        await axios.post(`${API_BASE_URL}/logout`, {
+          token,
+          login_history_id: loginHistoryId,
+        });
+        console.log("✅ Logout recorded in backend.");
+      } else {
+        console.warn("⚠️ Missing token or login history ID — skipping API logout.");
+      }
+
+      // Always clear session and redirect
       localStorage.removeItem("auth_token");
       localStorage.removeItem("member");
       sessionStorage.clear();
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
       console.log("✅ Successfully logged out and redirected.");
-    } catch (error) {
-      console.error("❌ Logout failed:", error);
+    } catch (error: any) {
+      console.error("❌ Logout failed:", error.response?.data || error.message);
+      // Still clear everything for safety
+      localStorage.removeItem("auth_token");
+      sessionStorage.clear();
+      navigate("/", { replace: true });
     }
   };
 

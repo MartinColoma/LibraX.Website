@@ -1,14 +1,14 @@
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45); /* softer overlay */
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
 }
 
-/* Loading overlay to block clicks */
+/* Global loading overlay */
 .loadingOverlay {
   position: fixed;
   top: 0;
@@ -16,24 +16,25 @@
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.4);
-  z-index: 9999; /* higher than modal */
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: wait;
-  pointer-events: all; /* Block clicks underneath */
+  pointer-events: all;
 }
 
 .modalContent {
-  background: #fff8f0; /* light cream */
+  background: #fff8f0;
   color: #2d2d2d;
   border-radius: 20px;
   width: 700px;
   max-width: 95%;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   position: relative;
-  border: 2px solid #bb9457; /* warm beige border */
+  border: 2px solid #bb9457;
   overflow: hidden;
+  transition: all 0.4s ease;
 }
 
 .modalCloseBtn {
@@ -41,7 +42,7 @@
   top: 20px;
   right: 20px;
   background: none;
-  color: #6f1d1b; /* falu red */
+  color: #6f1d1b;
   border: none;
   font-size: 20px;
   cursor: pointer;
@@ -50,7 +51,7 @@
 }
 
 .modalCloseBtn:hover {
-  color: #99582a; /* warm brown */
+  color: #99582a;
 }
 
 .modalBody {
@@ -58,7 +59,7 @@
   min-height: 300px;
 }
 
-/* Left side - Image Section */
+/* IMAGE SIDE */
 .imageSection {
   flex: 1;
   position: relative;
@@ -78,15 +79,8 @@
 
 .imageOverlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(67, 40, 24, 0.85),
-    rgba(111, 29, 27, 0.75)
-  );
+  inset: 0;
+  background: linear-gradient(135deg, rgba(67, 40, 24, 0.85), rgba(111, 29, 27, 0.75));
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -121,26 +115,28 @@
   letter-spacing: 0.5px;
 }
 
-/* Right side - Form Section */
+/* FORM SIDE */
 .formSection {
   flex: 1;
   padding: 60px 50px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  transition: all 0.4s ease;
 }
 
 .modalTitle {
   font-size: 28px;
   font-weight: 700;
-  color: #432818; /* dark bistre brown */
+  color: #432818;
   margin-bottom: 30px;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-.modalLoginForm {
+.modalLoginForm,
+.modalChangePassForm {
   display: flex;
   flex-direction: column;
   gap: 25px;
@@ -152,33 +148,23 @@
   gap: 8px;
 }
 
-.formLabelRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0 10px 5px 10px;
-}
-
 .formGroup label {
   font-size: 16px;
   font-weight: 600;
-  color: #432818; /* strong brown text */
-  margin: 0;
+  color: #432818;
 }
 
-.formErrorInline {
-  color: #d62828; /* warning red */
+.formError {
+  color: #d62828;
   font-size: 14px;
-  white-space: nowrap;
-  margin-left: 10px;
-  flex-shrink: 0;
+  margin-top: 5px;
 }
 
 .formGroup input {
   padding: 15px 20px;
-  border: 2px solid #e5dcc3; /* light beige border */
+  border: 2px solid #e5dcc3;
   border-radius: 1.5rem;
-  background: #fff; /* white input */
+  background: #fff;
   color: #2d2d2d;
   font-size: 16px;
   transition: all 0.3s ease;
@@ -186,32 +172,8 @@
 
 .formGroup input:focus {
   outline: none;
-  border-color: #bb9457; /* warm beige focus */
+  border-color: #bb9457;
   box-shadow: 0 0 0 3px rgba(187, 148, 87, 0.25);
-}
-
-.formGroup input::placeholder {
-  color: #888;
-}
-
-/* Fix Chrome Autofill Styles */
-.formGroup input:-webkit-autofill,
-.formGroup input:-webkit-autofill:hover,
-.formGroup input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #2d2d2d !important;
-  box-shadow: 0 0 0 1000px #fff inset !important;
-  border: 2px solid #e5dcc3 !important;
-  transition: background-color 5000s ease-in-out 0s !important;
-}
-
-.formGroup input:-webkit-autofill:focus {
-  box-shadow:
-    0 0 0 1000px #fff inset,
-    0 0 0 3px rgba(187, 148, 87, 0.25);
-  border-color: #bb9457 !important;
-  caret-color: #2d2d2d !important;
-  transition: none !important;
-  outline: none;
 }
 
 .passwordInputContainer {
@@ -231,23 +193,24 @@
   background: transparent;
   border: none;
   padding: 4px;
-  color: #6f1d1b; /* deep red */
+  color: #6f1d1b;
   cursor: pointer;
   z-index: 2;
   transition: color 0.3s ease;
 }
 
 .eyeBtn:hover {
-  color: #bb9457; /* warm beige hover */
+  color: #bb9457;
 }
 
+/* Buttons */
 .btnPrimary {
   padding: 18px 36px;
   border: none;
   border-radius: 1.5rem;
   font-size: 18px;
   font-weight: 600;
-  background: #bb9457; /* main accent beige */
+  background: #bb9457;
   color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -258,7 +221,7 @@
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: #99582a; /* darker warm brown */
+  background: #99582a;
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(153, 88, 42, 0.3);
 }
@@ -270,67 +233,79 @@
   box-shadow: none;
 }
 
-.formError {
-  color: #d62828; /* error red */
-  font-size: 14px;
-  margin-top: 5px;
-  flex-shrink: 0;
-  text-align: left;
+.btnSecondary {
+  background: none;
+  color: #6f1d1b;
+  border: 2px solid #bb9457;
+  border-radius: 1.5rem;
+  padding: 15px 25px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.loadingSpinner {
+.btnSecondary:hover {
+  background: #fff3e0;
+  border-color: #99582a;
+}
+
+/* Change Password Section */
+.changePassContainer {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.4s ease-in-out;
 }
 
-.animateSpin {
-  animation: spin 1s linear infinite;
+.changePassTitle {
+  font-size: 22px;
+  color: #6f1d1b;
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 10px;
 }
 
-@keyframes spin {
+.changePassNote {
+  text-align: center;
+  font-size: 14px;
+  color: #6f1d1b;
+  margin-bottom: 10px;
+  opacity: 0.8;
+}
+
+/* Animations */
+@keyframes fadeIn {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateY(15px);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* Responsive Adjustments */
+/* Responsive */
 @media (max-width: 768px) {
   .modalContent {
     width: 95%;
     max-width: 500px;
   }
-  
+
   .modalBody {
     flex-direction: column;
     min-height: auto;
   }
-  
+
   .imageSection {
     min-height: 200px;
-    flex: none;
   }
-  
-  .libraryTitle {
-    font-size: 28px;
-  }
-  
-  .welcomeText {
-    font-size: 16px;
-  }
-  
-  .librarySubtitle {
-    font-size: 14px;
-  }
-  
+
   .formSection {
     padding: 40px 30px;
   }
-  
+
   .modalTitle {
     font-size: 24px;
     margin-bottom: 25px;
@@ -342,27 +317,23 @@
     border-radius: 15px;
     margin: 20px;
   }
-  
+
   .imageSection {
     min-height: 150px;
   }
-  
+
   .libraryTitle {
     font-size: 24px;
   }
-  
-  .welcomeText {
-    font-size: 14px;
-  }
-  
+
   .formSection {
     padding: 30px 25px;
   }
-  
+
   .modalTitle {
     font-size: 20px;
   }
-  
+
   .btnPrimary {
     font-size: 16px;
     padding: 16px 32px;
