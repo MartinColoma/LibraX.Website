@@ -1,0 +1,134 @@
+/* ===========================================
+   MUJI-Themed Dashboard + Sidebar Integration
+   =========================================== */
+
+/* Custom MUJI Color Palette */
+:root {
+  --muji-red: #6d1f25;    /* Deep MUJI red */
+  --muji-brown: #7d5a44;  /* Muted brown */
+  --muji-grey: #bfb8af;   /* Soft warm grey */
+  --muji-ivory: #f5f3ee;  /* Off-white ivory */
+  --muji-dark: #1f1f1f;   /* Charcoal for text */
+}
+
+/* ===== PAGE LAYOUT ===== */
+.page-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--muji-ivory);
+}
+
+/* ===== MAIN CONTENT AREA ===== */
+.main-content {
+  flex-grow: 1;
+  padding: 24px;
+  transition: margin-left 0.3s ease;
+  margin-left: 250px; /* Default when sidebar is expanded */
+  min-height: 100vh;
+}
+
+/* When sidebar is collapsed */
+@media (min-width: 769px) {
+  .main-content[style*="margin-left: 85px"] {
+    margin-left: 85px !important;
+  }
+}
+
+/* ===== DASHBOARD CONTENT ===== */
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.welcome-card {
+  background-color: #ffffff;
+  border-left: 5px solid var(--muji-red);
+  padding: 32px;
+  border-radius: 12px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.welcome-card h1 {
+  font-size: 2rem;
+  color: var(--muji-brown);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.welcome-card p {
+  font-size: 1rem;
+  color: var(--muji-dark);
+  line-height: 1.6;
+  opacity: 0.85;
+}
+
+/* ===== FEATURE GRID ===== */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.feature-card {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card h3 {
+  color: var(--muji-red);
+  margin-bottom: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.feature-card p {
+  color: var(--muji-dark);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .features-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  
+  .dashboard-container {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0 !important;
+    padding: 16px;
+  }
+  
+  .welcome-card {
+    padding: 20px;
+  }
+  
+  .welcome-card h1 {
+    font-size: 1.5rem;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-container {
+    padding: 0;
+  }
+}

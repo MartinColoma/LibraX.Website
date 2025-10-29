@@ -4,7 +4,7 @@ import axios from "axios";
 import { Eye, EyeOff, Loader2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import styles from "./LoginModal.module.css";
-import libraryImage from "../../../images/library_cover.png";
+import libraryImage from "../../../images/library_cover1.jpg";
 
 interface Props {
   onClose: () => void;

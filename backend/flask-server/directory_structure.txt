@@ -1,4 +1,15 @@
 LibraX
+├── api
+│   ├── Dashboard
+│   │   ├── Librarian
+│   │   └── User
+│   ├── index.js
+│   ├── package-lock.json
+│   ├── package.json
+│   └── routes
+│       ├── auth.js
+│       ├── registration.js
+│       └── verify-token.js
 ├── frontend
 │   ├── .env
 │   ├── .gitignore
@@ -9,18 +20,25 @@ LibraX
 │   ├── package.json
 │   ├── public
 │   │   ├── HoKLibrary 128x128.png
+│   │   ├── LibraX Rectangle Logo 1.png
+│   │   ├── LibraX Rectangle Logo 2.png
+│   │   ├── LibraX Square Logo 1.png
+│   │   ├── LibraX Square Logo 2.png
 │   │   └── vite.svg
 │   ├── src
 │   │   ├── App.css
 │   │   ├── App.tsx
-│   │   ├── AppRoute.tsx
 │   │   ├── AppRoutes.tsx
 │   │   ├── assets
 │   │   │   └── react.svg
+│   │   ├── components
+│   │   │   └── ProtectedRoute.tsx
 │   │   ├── hooks
 │   │   │   └── usePageMeta.ts
 │   │   ├── images
-│   │   │   └── library_cover.png
+│   │   │   ├── library_cover.png
+│   │   │   ├── library_cover1.jpg
+│   │   │   └── library_cover2.jpg
 │   │   ├── index.css
 │   │   ├── main.tsx
 │   │   ├── pages
@@ -30,9 +48,12 @@ LibraX
 │   │   │   │   │       ├── Dash_Home.css
 │   │   │   │   │       └── Dash_Home.tsx
 │   │   │   │   └── User
-│   │   │   │       └── Home
-│   │   │   │           ├── MD_Home.css
-│   │   │   │           └── MD_Home.tsx
+│   │   │   │       ├── Home
+│   │   │   │       │   ├── User_Home.css
+│   │   │   │       │   └── User_Home.tsx
+│   │   │   │       └── Sidebar
+│   │   │   │           ├── Sidebar.css
+│   │   │   │           └── Sidebar.tsx
 │   │   │   ├── LandingPage
 │   │   │   │   ├── Home
 │   │   │   │   │   ├── Home.css
@@ -44,11 +65,16 @@ LibraX
 │   │   │   │       ├── UserRegistration.module.css
 │   │   │   │       └── UserRegistration.tsx
 │   │   │   ├── PageNotFound.css
-│   │   │   └── PageNotFound.tsx
+│   │   │   ├── PageNotFound.tsx
+│   │   │   └── Popup
+│   │   │       ├── Popup.module.css
+│   │   │       └── Popup.tsx
 │   │   └── utils
 │   │       └── supabaseClient.ts
 │   ├── tsconfig.app.json
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
 │   └── vite.config.ts
+├── package-lock.json
+├── package.json
 └── react_js.md

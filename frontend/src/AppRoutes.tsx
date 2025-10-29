@@ -1,25 +1,29 @@
-import React from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
-import { createPortal } from 'react-dom';
-
+import React from "react";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 
 // Pages
-import PageNotFound from './pages/PageNotFound';
-import LandingPage from './pages/LandingPage/Home/Home';
-import LoginModal from './pages/LandingPage/Login/LoginModal';
-import RegisterModal from './pages/LandingPage/Registration/UserRegistration';
+import PageNotFound from "./pages/PageNotFound";
+import LandingPage from "./pages/LandingPage/Home/Home";
+import LoginModal from "./pages/LandingPage/Login/LoginModal";
+import RegisterModal from "./pages/LandingPage/Registration/UserRegistration";
 
-// Import Librarian Pages
-import LibHome from './pages/Dashboard/Librarian/Home/Dash_Home';
+// Librarian Pages
+import LibHome from "./pages/Dashboard/Librarian/Home/Dash_Home";
 
-// Import User Pages
-import UserHome from './pages/Dashboard/User/Home/MD_Home';
+// User Pages
+import UserHome from "./pages/Dashboard/User/Home/User_Home";
 
-// ✅ Import ProtectedRoute
-import ProtectedRoute from './components/ProtectedRoute';
+// Protected Route
+import ProtectedRoute from "./components/ProtectedRoute";
 
-// Full-page LoginPage
+/* 
+  ✅ Full-page Login Page Wrapper 
+  Handles both direct route (/login) and modal invocation
+*/
 const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div
       style={{
@@ -30,7 +34,18 @@ const LoginPage: React.FC = () => {
         background: "#fff8f0",
       }}
     >
-      <LoginModal onClose={() => { window.history.back(); }} />
+      {/* ✅ In HashRouter, navigate(-1) may not behave predictably, 
+          so explicitly route to root or dashboard */}
+      <LoginModal
+        onClose={() => {
+          const lastPath = sessionStorage.getItem("last_path");
+          if (lastPath && lastPath !== "/login") {
+            navigate(lastPath, { replace: true });
+          } else {
+            navigate("/", { replace: true });
+          }
+        }}
+      />
     </div>
   );
 };
@@ -38,14 +53,15 @@ const LoginPage: React.FC = () => {
 const AppRoutes: React.FC = () => {
   const location = useLocation();
 
-  // @ts-ignore
+  // Handle modal background state (for modal routing)
   const state = location.state as { backgroundLocation?: Location };
   const background = state?.backgroundLocation;
-  
+
   return (
     <>
+      {/* Base routes */}
       <Routes location={background || location}>
-        <Route path='*' element={<PageNotFound />} />
+        <Route path="*" element={<PageNotFound />} />
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
 
@@ -53,8 +69,8 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/librarian/dashboard/home"
           element={
-            <ProtectedRoute 
-              allowedUserTypes={["staff"]} 
+            <ProtectedRoute
+              allowedUserTypes={["staff"]}
               allowedRoles={["Librarian"]}
             >
               <LibHome />
@@ -62,7 +78,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* ✅ Protected User Routes */}
+        {/* ✅ Protected Member Routes */}
         <Route
           path="/user/dashboard/home"
           element={
@@ -73,20 +89,32 @@ const AppRoutes: React.FC = () => {
         />
       </Routes>
 
-      {/* Modal pages */}
+      {/* ✅ Modal routes (rendered as portals) */}
       {background && (
         <Routes>
           <Route
             path="/login"
             element={createPortal(
-              <LoginModal onClose={() => window.history.back()} />,
+              <LoginModal
+                onClose={() => {
+                  const navigate = window.location.hash.includes("user")
+                    ? "#/user/dashboard/home"
+                    : "#/";
+                  window.location.hash = navigate;
+                }}
+              />,
               document.body
             )}
           />
+
           <Route
             path="/register"
             element={createPortal(
-              <RegisterModal onClose={() => window.history.back()} />,
+              <RegisterModal
+                onClose={() => {
+                  window.location.hash = "#/";
+                }}
+              />,
               document.body
             )}
           />

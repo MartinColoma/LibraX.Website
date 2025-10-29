@@ -1,17 +1,25 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react"; // useRef
 import { useNavigate } from "react-router-dom";
-import "./MD_Home.css";
+import "./User_Home.css";
 import usePageMeta from '../../../../hooks/usePageMeta';
+import Sidebar from "../Sidebar/Sidebar";
 
 const MemberDashboard: React.FC = () => {
   usePageMeta("User Dashboard - Home", "/LibraX Square Logo 1.png");
   const navigate = useNavigate();
 
   const [memberName, setMemberName] = useState<string>("");
-  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
-  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // ✅ Use ref instead of state
 
-  // ✅ Function to handle logout
+  // ✅ Integrated Sidebar Collapse State (from former version)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
+    sessionStorage.getItem("sidebarCollapsed") === "true"
+  );
+
+  //const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+  // const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // ✅ Disabled inactivity timer ref
+
+  /* 
+  // 🚪 Function to handle logout (DISABLED)
   const handleSessionExpired = () => {
     console.log("🔒 Session expired, logging out...");
     
@@ -24,8 +32,9 @@ const MemberDashboard: React.FC = () => {
       navigate("/login", { replace: true });
     }, 2000);
   };
+  */
 
-  // ✅ Function to check if token is expired
+  // ✅ Function to check if token is expired (still active but no logout call)
   const isTokenExpired = (token: string): boolean => {
     try {
       const parts = token.split('.');
@@ -42,7 +51,8 @@ const MemberDashboard: React.FC = () => {
     }
   };
 
-  // ✅ Function to reset inactivity timer
+  /*
+  // 💤 Function to reset inactivity timer (DISABLED)
   const resetInactivityTimer = () => {
     if (sessionTimeoutRef.current) {
       clearTimeout(sessionTimeoutRef.current);
@@ -55,13 +65,14 @@ const MemberDashboard: React.FC = () => {
 
     sessionTimeoutRef.current = timer;
   };
+  */
 
-  // ✅ Setup inactivity detection - ONLY on mount
+  // ✅ Setup user verification - ONLY on mount
   useEffect(() => {
     const userType = sessionStorage.getItem("user_type");
     if (userType !== "member") {
       console.log("❌ Not a member, redirecting to login");
-      navigate("/login", { replace: true });
+      // navigate("/login", { replace: true }); // 🚫 Disabled auto-redirect
       return;
     }
 
@@ -70,42 +81,40 @@ const MemberDashboard: React.FC = () => {
 
     console.log("✅ Member dashboard loaded");
 
-    // Initialize timer
+    // 💤 Disabled inactivity timer setup
+    /*
     resetInactivityTimer();
 
-    // Add event listeners
     const events = ["mousedown", "keydown", "scroll", "touchstart", "click", "mousemove"];
-    
     events.forEach(event => {
       document.addEventListener(event, resetInactivityTimer, true);
     });
 
-    // Cleanup
     return () => {
       events.forEach(event => {
         document.removeEventListener(event, resetInactivityTimer, true);
       });
-      
       if (sessionTimeoutRef.current) {
         clearTimeout(sessionTimeoutRef.current);
       }
     };
-  }, [navigate]); // ✅ Only navigate and usePageMeta in dependency
+    */
+  }, [navigate]);
 
-  // ✅ Check token expiration periodically - SEPARATE effect
+  // ✅ Token expiration check (no longer logs out or redirects)
   useEffect(() => {
     const checkTokenExpiration = () => {
       const token = localStorage.getItem("auth_token");
 
       if (!token) {
-        console.log("❌ No token found");
-        handleSessionExpired();
+        console.log("❌ No token found (auto-logout disabled)");
+        // handleSessionExpired(); // 🚫 Disabled
         return;
       }
 
       if (isTokenExpired(token)) {
-        console.log("⚠️ Token has expired");
-        handleSessionExpired();
+        console.log("⚠️ Token has expired (auto-logout disabled)");
+        // handleSessionExpired(); // 🚫 Disabled
         return;
       }
 
@@ -116,7 +125,7 @@ const MemberDashboard: React.FC = () => {
     const tokenCheckInterval = setInterval(checkTokenExpiration, 1 * 60 * 1000);
 
     return () => clearInterval(tokenCheckInterval);
-  }, []); // ✅ Empty dependency array - runs once
+  }, []);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -127,6 +136,8 @@ const MemberDashboard: React.FC = () => {
 
   return (
     <div className="page-layout">
+      {/* 🚫 Disabled Session Expired Modal */}
+      {/* 
       {showSessionExpiredModal && (
         <div style={{
           position: "fixed",
@@ -152,14 +163,34 @@ const MemberDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      */}
 
-      <main className="main-content">
+      {/* ✅ Integrated Sidebar with Collapse Persistence */}
+      <Sidebar
+        onCollapse={(state: boolean) => {
+          setSidebarCollapsed(state);
+          sessionStorage.setItem("sidebarCollapsed", String(state));
+          window.dispatchEvent(new Event("storage"));
+        }}
+      />
+
+      {/* ✅ Responsive main content margin */}
+      <main
+        className="main-content"
+        style={{
+          marginLeft: sidebarCollapsed ? "85px" : "250px",
+          transition: "margin 0.3s ease",
+        }}
+      >
         <div className="dashboard-container">
           <div className="welcome-card">
             <h1>
               {getGreeting()}, {memberName} 👋
             </h1>
-            <p>Welcome to your library dashboard. Explore resources, check your reservations, and stay updated with library news.</p>
+            <p>
+              Welcome to your library dashboard. Explore resources, check your reservations,
+              and stay updated with library news.
+            </p>
           </div>
 
           <div className="features-grid">

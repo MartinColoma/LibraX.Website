@@ -2,13 +2,13 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, IdCard } from 'lucide-react';
 import './Home.css';
-//import usePageMeta from  '../../../hooks/usePageMeta';
+import usePageMeta from  '../../../hooks/usePageMeta';
 import LoginPage from '../Login/LoginModal';
 import RegisterPage from '../Registration/UserRegistration';
 
 
 const Home: React.FC = () => {
-  //usePageMeta("LibraX | AIoT Library Kiosk", "LibraX Square Logo 1.png");
+  usePageMeta("LibraX | AIoT Library Kiosk", "LibraX Square Logo 1.png");
   const navigate = useNavigate();
   const location = useLocation();
 
