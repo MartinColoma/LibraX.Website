@@ -298,33 +298,6 @@
   }
 }
 
-
-/* Additional CSS for Password Change Screen */
-.passwordChangeHeader {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.lockIcon {
-  color: #bb9457;
-  margin: 0 auto 15px;
-  display: block;
-}
-
-.passwordChangeSubtext {
-  font-size: 14px;
-  color: #666;
-  margin-top: 10px;
-  line-height: 1.5;
-}
-
-.passwordHint {
-  color: #888;
-  font-size: 13px;
-  margin-top: 5px;
-  display: block;
-}
-
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .modalContent {

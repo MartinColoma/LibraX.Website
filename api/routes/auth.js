@@ -36,26 +36,8 @@ function getManilaTimeISO() {
   return manilaTime.toISOString().replace("Z", "+08:00");
 }
 
-// Middleware to authenticate JWT token
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
-}
-
 const authRoutes = (app) => {
-  // ===== LOGIN with First-Time Detection =====
+  // ===== LOGIN =====
   app.post("/api/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -80,30 +62,11 @@ const authRoutes = (app) => {
 
       const user = users[0];
 
-      // Check if account is active (if status field exists)
-      if (user.status && user.status !== 'active') {
-        console.log(`⚠️ Account status check failed for ${email}: status = ${user.status}`);
-        return res.status(403).json({ 
-          error: `Account is ${user.status}. Please contact admin.` 
-        });
-      }
-
       // Validate password hash
       const isMatch = await bcrypt.compare(password, user.password_hash);
       if (!isMatch) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-
-      // 🔍 Check login history count for first-time login detection
-      const { data: loginHistory, error: historyErr } = await supabase
-        .from("login_history")
-        .select("history_id")
-        .eq("user_id", user.user_id);
-
-      if (historyErr) throw historyErr;
-
-      const loginCount = loginHistory ? loginHistory.length : 0;
-      const isFirstLogin = loginCount === 0;
 
       // Update last login timestamp (Manila time)
       const manilaNow = getManilaTimeISO();
@@ -129,7 +92,7 @@ const authRoutes = (app) => {
           user_type: user.user_type,
           ip_address: ip,
           user_agent: userAgent,
-          login_time: manilaNow,
+          login_time: manilaNow, // Manila timestamp
         },
       ]);
 
@@ -142,14 +105,11 @@ const authRoutes = (app) => {
       delete user.password_hash;
       user.full_name = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
 
-      console.log(`✅ Login successful for ${user.email} | First login: ${isFirstLogin}`);
-
       return res.status(200).json({
         message: "✅ Login successful",
         token,
         user,
         login_history_id: historyId,
-        is_first_login: isFirstLogin, // 🆕 Flag for frontend
       });
     } catch (err) {
       console.error("❌ Login error:", err);
@@ -232,73 +192,7 @@ const authRoutes = (app) => {
     }
   });
 
-  // ===== CHANGE PASSWORD (First-Time Login & Authenticated Users) =====
-  app.post("/api/change-password", authenticateToken, async (req, res) => {
-    try {
-      const { user_id, new_password } = req.body;
-
-      // Validate input
-      if (!user_id || !new_password) {
-        return res.status(400).json({ 
-          error: "User ID and new password are required" 
-        });
-      }
-
-      // Validate that the authenticated user matches the user_id
-      if (req.user.userId !== user_id) {
-        return res.status(403).json({ 
-          error: "Unauthorized to change this password" 
-        });
-      }
-
-      // Validate password strength
-      if (new_password.length < 8) {
-        return res.status(400).json({ 
-          error: "Password must be at least 8 characters" 
-        });
-      }
-
-      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(new_password)) {
-        return res.status(400).json({ 
-          error: "Password must contain uppercase, lowercase, and number" 
-        });
-      }
-
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(new_password, 10);
-
-      // Update password in database
-      const { data, error: updateErr } = await supabase
-        .from("users")
-        .update({ 
-          password_hash: hashedPassword,
-          updated_at: getManilaTimeISO()
-        })
-        .eq("user_id", user_id)
-        .select("user_id");
-
-      if (updateErr) throw updateErr;
-
-      if (!data || data.length === 0) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      console.log(`✅ Password changed successfully for user_id: ${user_id}`);
-
-      return res.status(200).json({
-        message: "✅ Password changed successfully",
-        user_id: data[0].user_id,
-      });
-    } catch (err) {
-      console.error("❌ Password change error:", err);
-      return res.status(500).json({
-        message: "❌ Failed to change password",
-        error: err.message || String(err),
-      });
-    }
-  });
-
-  // ===== LEGACY: FIRST LOGIN PASSWORD CHANGE (Keep for backward compatibility) =====
+  // ===== FIRST LOGIN PASSWORD CHANGE =====
   app.post("/api/change-password-first-login", async (req, res) => {
     try {
       const { user_id, new_password, confirm_password } = req.body;
@@ -311,7 +205,7 @@ const authRoutes = (app) => {
         return res.status(400).json({ error: "Passwords do not match." });
       }
 
-      // Check login history for this user
+      // 1️⃣ Check login history for this user
       const { data: loginHistory, error: historyErr } = await supabase
         .from("login_history")
         .select("history_id")
@@ -325,36 +219,20 @@ const authRoutes = (app) => {
         });
       }
 
-      // Only allow password change if first login (1 record only)
+      // 2️⃣ Only allow password change if first login (1 record only)
       if (loginHistory.length > 1) {
         return res.status(403).json({
           error: "Password change only allowed on first login.",
         });
       }
 
-      // Validate password strength
-      if (new_password.length < 8) {
-        return res.status(400).json({ 
-          error: "Password must be at least 8 characters" 
-        });
-      }
-
-      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(new_password)) {
-        return res.status(400).json({ 
-          error: "Password must contain uppercase, lowercase, and number" 
-        });
-      }
-
-      // Hash new password
+      // 3️⃣ Hash new password
       const hashedPassword = await bcrypt.hash(new_password, 10);
 
-      // Update user's password
+      // 4️⃣ Update user's password
       const { error: updateErr } = await supabase
         .from("users")
-        .update({ 
-          password_hash: hashedPassword,
-          updated_at: getManilaTimeISO()
-        })
+        .update({ password_hash: hashedPassword })
         .eq("user_id", user_id);
 
       if (updateErr) throw updateErr;
