@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"; // useRef
+import React, { useEffect, useState,useRef } from "react"; // useRef
 import { useNavigate } from "react-router-dom";
 import "./User_Home.css";
 import usePageMeta from '../../../../hooks/usePageMeta';
@@ -15,11 +15,11 @@ const MemberDashboard: React.FC = () => {
     sessionStorage.getItem("sidebarCollapsed") === "true"
   );
 
-  //const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
-  // const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // ✅ Disabled inactivity timer ref
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // ✅ Disabled inactivity timer ref
 
-  /* 
-  // 🚪 Function to handle logout (DISABLED)
+  
+  //🚪 Function to handle logout (DISABLED)
   const handleSessionExpired = () => {
     console.log("🔒 Session expired, logging out...");
     
@@ -32,7 +32,7 @@ const MemberDashboard: React.FC = () => {
       navigate("/login", { replace: true });
     }, 2000);
   };
-  */
+  
 
   // ✅ Function to check if token is expired (still active but no logout call)
   const isTokenExpired = (token: string): boolean => {
@@ -51,7 +51,7 @@ const MemberDashboard: React.FC = () => {
     }
   };
 
-  /*
+  
   // 💤 Function to reset inactivity timer (DISABLED)
   const resetInactivityTimer = () => {
     if (sessionTimeoutRef.current) {
@@ -65,7 +65,7 @@ const MemberDashboard: React.FC = () => {
 
     sessionTimeoutRef.current = timer;
   };
-  */
+  
 
   // ✅ Setup user verification - ONLY on mount
   useEffect(() => {
@@ -82,7 +82,7 @@ const MemberDashboard: React.FC = () => {
     console.log("✅ Member dashboard loaded");
 
     // 💤 Disabled inactivity timer setup
-    /*
+    
     resetInactivityTimer();
 
     const events = ["mousedown", "keydown", "scroll", "touchstart", "click", "mousemove"];
@@ -98,7 +98,7 @@ const MemberDashboard: React.FC = () => {
         clearTimeout(sessionTimeoutRef.current);
       }
     };
-    */
+    
   }, [navigate]);
 
   // ✅ Token expiration check (no longer logs out or redirects)
@@ -137,7 +137,7 @@ const MemberDashboard: React.FC = () => {
   return (
     <div className="page-layout">
       {/* 🚫 Disabled Session Expired Modal */}
-      {/* 
+      
       {showSessionExpiredModal && (
         <div style={{
           position: "fixed",
@@ -163,7 +163,7 @@ const MemberDashboard: React.FC = () => {
           </div>
         </div>
       )}
-      */}
+     
 
       {/* ✅ Integrated Sidebar with Collapse Persistence */}
       <Sidebar

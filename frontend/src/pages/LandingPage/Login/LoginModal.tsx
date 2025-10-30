@@ -18,15 +18,23 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
-  const [isFirstLogin, setIsFirstLogin] = useState(false);
 
-  // New state for password change step
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [changePassError, setChangePassError] = useState("");
-  const [isChanging, setIsChanging] = useState(false);
+  // Password change state
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordChangeData, setPasswordChangeData] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordChangeErrors, setPasswordChangeErrors] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [tempUserData, setTempUserData] = useState<any>(null);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const newPasswordRef = useRef<HTMLInputElement>(null);
 
   const API_BASE = "https://librax-website-frontend.onrender.com/api";
 
@@ -37,8 +45,12 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
   });
 
   useEffect(() => {
-    emailInputRef.current?.focus();
-  }, []);
+    if (showPasswordChange && newPasswordRef.current) {
+      newPasswordRef.current.focus();
+    } else if (!showPasswordChange && emailInputRef.current) {
+      emailInputRef.current.focus();
+    }
+  }, [showPasswordChange]);
 
   const validateForm = () => {
     const newErrors = { email: "", password: "" };
@@ -64,12 +76,42 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     return isValid;
   };
 
+  const validatePasswordChange = () => {
+    const newErrors = { newPassword: "", confirmPassword: "" };
+    let isValid = true;
+
+    if (!passwordChangeData.newPassword.trim()) {
+      newErrors.newPassword = "New password is required";
+      isValid = false;
+    } else if (passwordChangeData.newPassword.length < 8) {
+      newErrors.newPassword = "Min 8 characters";
+      isValid = false;
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(passwordChangeData.newPassword)) {
+      newErrors.newPassword = "Must contain uppercase, lowercase, and number";
+      isValid = false;
+    }
+
+    if (!passwordChangeData.confirmPassword.trim()) {
+      newErrors.confirmPassword = "Confirm your password";
+      isValid = false;
+    } else if (passwordChangeData.newPassword !== passwordChangeData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+      isValid = false;
+    }
+
+    setPasswordChangeErrors(newErrors);
+    return isValid;
+  };
+
   const checkEmailExists = async (email: string) => {
     if (!email || errors.email) return;
     setCheckingEmail(true);
 
     try {
-      const response = await api.get(`/check-email`, { params: { email } });
+      const response = await api.get(`/check-email`, {
+        params: { email },
+      });
+
       if (!response.data.exists) {
         setErrors((prev) => ({ ...prev, email: "Email not registered" }));
       } else {
@@ -85,8 +127,18 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (errors[name as keyof typeof errors]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handlePasswordChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordChangeData((prev) => ({ ...prev, [name]: value }));
+
+    if (passwordChangeErrors[name as keyof typeof passwordChangeErrors]) {
+      setPasswordChangeErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
@@ -107,25 +159,30 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
         password: formData.password.trim(),
       });
 
-      const { token, user, login_history_id, first_login } = response.data;
+      console.log("Login Response:", response.data);
 
-      localStorage.setItem("auth_token", token);
-      if (login_history_id) {
-        sessionStorage.setItem("login_history_id", login_history_id);
+      const { token, user, login_history_id, is_first_login } = response.data;
+
+      // Handle API error response format
+      if (response.data.error) {
+        setErrors((prev) => ({
+          ...prev,
+          password: response.data.error,
+        }));
+        return;
       }
 
-      sessionStorage.setItem("user_name", user.full_name || user.email);
-      sessionStorage.setItem("user_role", user.role || "");
-      sessionStorage.setItem("user_type", user.user_type || "");
-      sessionStorage.setItem("user_id", user.user_id || "");
-
-      if (first_login) {
-        setIsFirstLogin(true);
-        return; // Stop here and show change password form
+      // Check if this is first time login
+      if (is_first_login === true) {
+        console.log("First time login detected - prompting password change");
+        setTempUserData({ token, user, login_history_id });
+        setShowPasswordChange(true);
+        setIsLoading(false);
+        return;
       }
 
-      onClose();
-      navigateToDashboard(user);
+      // Normal login flow
+      completeLogin(token, user, login_history_id);
     } catch (error: any) {
       console.error("Login error:", error);
 
@@ -146,72 +203,101 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
     }
   };
 
-  const navigateToDashboard = (user: any) => {
+  const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLoading || !validatePasswordChange()) return;
+
+    setIsLoading(true);
+
+    try {
+      // Call change password API
+      const response = await api.post(
+        `/change-password`,
+        {
+          user_id: tempUserData.user.user_id,
+          new_password: passwordChangeData.newPassword.trim(),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${tempUserData.token}`,
+          },
+        }
+      );
+
+      console.log("Password change response:", response.data);
+
+      // Complete login after password change
+      completeLogin(tempUserData.token, tempUserData.user, tempUserData.login_history_id);
+    } catch (error: any) {
+      console.error("Password change error:", error);
+
+      if (error.response?.data?.message) {
+        setPasswordChangeErrors((prev) => ({
+          ...prev,
+          newPassword: error.response.data.message,
+        }));
+      } else {
+        alert("Failed to change password. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const completeLogin = (token: string, user: any, login_history_id: string) => {
+    localStorage.setItem("auth_token", token);
+    
+    if (login_history_id) {
+      sessionStorage.setItem("login_history_id", login_history_id);
+    } else {
+      console.warn("⚠️ Login history ID missing from response.");
+    }
+
+    const displayName = user.full_name || user.username || user.email || "Unknown User";
+
+    sessionStorage.setItem("user_name", displayName);
+    sessionStorage.setItem("user_role", user.role || "");
+    sessionStorage.setItem("user_type", user.user_type || "");
+    sessionStorage.setItem("user_id", user.user_id || "");
+
+    console.log("User data saved:", {
+      user_type: user.user_type,
+      role: user.role,
+    });
+
+    onClose();
+
     setTimeout(() => {
-      if (user.user_type === "staff" && user.role === "Librarian") {
-        navigate("/librarian/dashboard/home", { replace: true });
+      if (user.user_type === "staff") {
+        if (user.role === "Librarian") {
+          console.log("Navigating to librarian dashboard");
+          navigate("/librarian/dashboard/home", { replace: true });
+        }
       } else if (user.user_type === "member") {
+        console.log("Navigating to user dashboard");
         navigate("/user/dashboard/home", { replace: true });
       } else {
         alert("Unknown user type. Please contact admin.");
       }
-    }, 200);
-  };
-
-  // --- CHANGE PASSWORD HANDLER ---
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPassword || !confirmPassword)
-      return setChangePassError("All fields are required.");
-    if (newPassword.length < 6)
-      return setChangePassError("Password must be at least 6 characters.");
-    if (newPassword !== confirmPassword)
-      return setChangePassError("Passwords do not match.");
-
-    setIsChanging(true);
-    setChangePassError("");
-
-    const user_id = sessionStorage.getItem("user_id");
-
-    try {
-      const res = await api.post(`/change-password-first-login`, {
-        user_id,
-        new_password: newPassword,
-        confirm_password: confirmPassword,
-      });
-
-      if (res.data.password_changed) {
-        alert("✅ Password changed successfully. Proceeding to dashboard...");
-        onClose();
-        navigateToDashboard({
-          user_type: sessionStorage.getItem("user_type"),
-          role: sessionStorage.getItem("user_role"),
-        });
-      }
-    } catch (err: any) {
-      console.error("Change password error:", err);
-      setChangePassError(
-        err.response?.data?.error || "Failed to change password."
-      );
-    } finally {
-      setIsChanging(false);
-    }
+    }, 100);
   };
 
   const isFormInvalid =
-    !formData.email ||
-    !!errors.email ||
-    !formData.password ||
-    formData.password.length < 6;
+    !formData.email || !!errors.email || !formData.password || formData.password.length < 6;
+
+  const isPasswordChangeInvalid =
+    !passwordChangeData.newPassword ||
+    !passwordChangeData.confirmPassword ||
+    passwordChangeData.newPassword.length < 8 ||
+    passwordChangeData.newPassword !== passwordChangeData.confirmPassword;
 
   return ReactDOM.createPortal(
     <div className={styles.modalOverlay}>
-      {(isLoading || checkingEmail || isChanging) && (
+      {(isLoading || checkingEmail) && (
         <div className={styles.loadingOverlay}>
           <Loader2 size={48} className={styles.animateSpin} />
         </div>
       )}
-
       <div className={styles.modalContent}>
         <button className={styles.modalCloseBtn} onClick={onClose} disabled={isLoading}>
           <X size={18} />
@@ -224,13 +310,13 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
               <h3 className={styles.welcomeText}>Welcome to</h3>
               <h2 className={styles.libraryTitle}>LibraX</h2>
               <p className={styles.librarySubtitle}>
-                {isFirstLogin ? "Secure your account" : "Portal Access"}
+                {showPasswordChange ? "Security Update" : "Portal Access"}
               </p>
             </div>
           </div>
 
           <div className={styles.formSection}>
-            {!isFirstLogin ? (
+            {!showPasswordChange ? (
               <>
                 <h2 className={styles.modalTitle}>Login</h2>
                 <form onSubmit={handleSubmit} className={styles.modalLoginForm}>
@@ -290,47 +376,82 @@ const LoginPage: React.FC<Props> = ({ onClose }) => {
               </>
             ) : (
               <>
-                <h2 className={styles.modalTitle}>
-                  <Lock size={20} /> Change Password
-                </h2>
-                <form onSubmit={handlePasswordChange} className={styles.modalLoginForm}>
-                  {changePassError && (
-                    <div className={styles.formError}>{changePassError}</div>
-                  )}
+                <div className={styles.passwordChangeHeader}>
+                  <Lock size={32} className={styles.lockIcon} />
+                  <h2 className={styles.modalTitle}>Change Password</h2>
+                  <p className={styles.passwordChangeSubtext}>
+                    For security, please set a new password for your first login
+                  </p>
+                </div>
 
+                <form onSubmit={handlePasswordChangeSubmit} className={styles.modalLoginForm}>
                   <div className={styles.formGroup}>
                     <label>New Password:</label>
-                    <input
-                      type="password"
-                      placeholder="Enter new password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={isChanging}
-                    />
+                    {passwordChangeErrors.newPassword && (
+                      <div className={styles.formError}>{passwordChangeErrors.newPassword}</div>
+                    )}
+                    <div className={styles.passwordInputContainer}>
+                      <input
+                        ref={newPasswordRef}
+                        type={showNewPassword ? "text" : "password"}
+                        name="newPassword"
+                        placeholder="Enter new password"
+                        value={passwordChangeData.newPassword}
+                        onChange={handlePasswordChangeInput}
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className={styles.eyeBtn}
+                        disabled={isLoading}
+                      >
+                        {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <small className={styles.passwordHint}>
+                      Min 8 characters with uppercase, lowercase, and number
+                    </small>
                   </div>
 
                   <div className={styles.formGroup}>
                     <label>Confirm Password:</label>
-                    <input
-                      type="password"
-                      placeholder="Confirm new password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isChanging}
-                    />
+                    {passwordChangeErrors.confirmPassword && (
+                      <div className={styles.formError}>
+                        {passwordChangeErrors.confirmPassword}
+                      </div>
+                    )}
+                    <div className={styles.passwordInputContainer}>
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        placeholder="Confirm new password"
+                        value={passwordChangeData.confirmPassword}
+                        onChange={handlePasswordChangeInput}
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className={styles.eyeBtn}
+                        disabled={isLoading}
+                      >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
 
                   <button
                     type="submit"
                     className={styles.btnPrimary}
-                    disabled={isChanging || !newPassword || !confirmPassword}
+                    disabled={isLoading || isPasswordChangeInvalid}
                   >
-                    {isChanging ? (
+                    {isLoading ? (
                       <span className={styles.loadingSpinner}>
-                        <Loader2 size={16} className={styles.animateSpin} /> Changing...
+                        <Loader2 size={16} className={styles.animateSpin} /> Updating Password...
                       </span>
                     ) : (
-                      "Change Password"
+                      "Update Password"
                     )}
                   </button>
                 </form>
