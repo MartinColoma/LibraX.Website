@@ -19,12 +19,35 @@
   font-size: 1.5rem;
 }
 
+/* Loading State */
+.loading-spinner {
+  text-align: center;
+  padding: 40px;
+  color: var(--muji-dark);
+  font-size: 1rem;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: var(--muji-brown);
+  font-size: 1rem;
+}
+
+/* Desktop Table Styles */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 .overview-table {
   width: 100%;
   border-collapse: collapse;
   background-color: white;
   border-radius: 10px;
   overflow: hidden;
+  min-width: 600px;
 }
 
 .overview-table th {
@@ -34,6 +57,7 @@
   padding: 12px;
   font-weight: 600;
   font-size: 0.95rem;
+  white-space: nowrap;
 }
 
 .overview-table td {
@@ -41,6 +65,10 @@
   border-bottom: 1px solid var(--muji-grey);
   color: var(--muji-dark);
   font-size: 0.9rem;
+}
+
+.overview-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .overview-table tr:hover {
@@ -53,6 +81,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: capitalize;
+  display: inline-block;
 }
 
 .status-badge.active {
@@ -63,4 +92,228 @@
 .status-badge.inactive {
   background-color: var(--muji-grey);
   color: var(--muji-dark);
+}
+
+/* Mobile Card View */
+.mobile-cards {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.user-card {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  background-color: var(--muji-red);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-number {
+  color: var(--muji-ivory);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--muji-ivory);
+}
+
+.card-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.card-label {
+  color: var(--muji-brown);
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  min-width: 70px;
+}
+
+.card-value {
+  color: var(--muji-dark);
+  font-size: 0.9rem;
+  text-align: right;
+  word-break: break-word;
+}
+
+.card-email {
+  font-size: 0.85rem;
+  color: var(--muji-brown);
+}
+
+/* Tablet Responsive */
+@media (max-width: 1024px) {
+  .overview-container {
+    padding: 16px;
+  }
+
+  .overview-container h2 {
+    font-size: 1.3rem;
+    margin-bottom: 16px;
+  }
+
+  .overview-table {
+    font-size: 0.85rem;
+  }
+
+  .overview-table th,
+  .overview-table td {
+    padding: 10px;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .overview-container {
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .overview-container h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+  }
+
+  /* Hide table, show cards */
+  .table-wrapper {
+    display: none;
+  }
+
+  .mobile-cards {
+    display: flex;
+  }
+
+  .loading-spinner,
+  .no-data {
+    padding: 30px 16px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 480px) {
+  .overview-container {
+    padding: 10px;
+  }
+
+  .overview-container h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+  }
+
+  .mobile-cards {
+    gap: 12px;
+  }
+
+  .user-card {
+    border-radius: 8px;
+  }
+
+  .card-header {
+    padding: 10px 14px;
+  }
+
+  .card-number {
+    font-size: 0.9rem;
+  }
+
+  .card-body {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .card-row {
+    padding-bottom: 10px;
+  }
+
+  .card-label {
+    font-size: 0.8rem;
+    min-width: 65px;
+  }
+
+  .card-value {
+    font-size: 0.85rem;
+  }
+
+  .card-email {
+    font-size: 0.8rem;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Landscape Mobile */
+@media (max-width: 896px) and (orientation: landscape) {
+  .table-wrapper {
+    display: block;
+  }
+
+  .mobile-cards {
+    display: none;
+  }
+
+  .overview-table {
+    min-width: 500px;
+  }
+
+  .overview-table th,
+  .overview-table td {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .overview-container {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .mobile-cards {
+    display: none;
+  }
+
+  .table-wrapper {
+    display: block;
+  }
+
+  .overview-table {
+    border: 1px solid #ddd;
+  }
+
+  .user-card:active {
+    transform: none;
+  }
 }

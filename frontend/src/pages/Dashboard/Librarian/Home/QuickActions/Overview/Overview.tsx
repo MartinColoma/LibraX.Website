@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./Overview.css";
 
 interface User {
-  id: string; // matches user_id from DB
+  id: string;
   name: string;
   email: string;
   role: string;
@@ -13,6 +13,16 @@ interface User {
 const Overview: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchRecentUsers = async () => {
@@ -33,46 +43,107 @@ const Overview: React.FC = () => {
     fetchRecentUsers();
   }, []);
 
-  if (loading) return <p>Loading recent users...</p>;
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isMobile) {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+    return date.toLocaleString();
+  };
+
+  if (loading) {
+    return (
+      <div className="overview-container">
+        <div className="loading-spinner">Loading recent users...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="overview-container">
-      <h2>👥 Recent User Accounts</h2>
+      <h2>Recent User Accounts</h2>
       {users.length === 0 ? (
-        <p>No users found.</p>
+        <p className="no-data">No users found.</p>
       ) : (
-        <table className="overview-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Full Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Date Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u, index) => (
-              <tr key={u.id}>
-                <td>{index + 1}</td>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>{u.role}</td>
-                <td>
-                  <span
-                    className={`status-badge ${
-                      u.status.toLowerCase() === "active" ? "active" : "inactive"
-                    }`}
-                  >
-                    {u.status}
-                  </span>
-                </td>
-                <td>{new Date(u.created_at).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          {/* Desktop Table View */}
+          {!isMobile ? (
+            <div className="table-wrapper">
+              <table className="overview-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Date Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u, index) => (
+                    <tr key={u.id}>
+                      <td>{index + 1}</td>
+                      <td>{u.name}</td>
+                      <td>{u.email}</td>
+                      <td>{u.role}</td>
+                      <td>
+                        <span
+                          className={`status-badge ${
+                            u.status.toLowerCase() === "active" ? "active" : "inactive"
+                          }`}
+                        >
+                          {u.status}
+                        </span>
+                      </td>
+                      <td>{formatDate(u.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            /* Mobile Card View */
+            <div className="mobile-cards">
+              {users.map((u, index) => (
+                <div key={u.id} className="user-card">
+                  <div className="card-header">
+                    <span className="card-number">#{index + 1}</span>
+                    <span
+                      className={`status-badge ${
+                        u.status.toLowerCase() === "active" ? "active" : "inactive"
+                      }`}
+                    >
+                      {u.status}
+                    </span>
+                  </div>
+                  <div className="card-body">
+                    <div className="card-row">
+                      <span className="card-label">Name:</span>
+                      <span className="card-value">{u.name}</span>
+                    </div>
+                    <div className="card-row">
+                      <span className="card-label">Email:</span>
+                      <span className="card-value card-email">{u.email}</span>
+                    </div>
+                    <div className="card-row">
+                      <span className="card-label">Role:</span>
+                      <span className="card-value">{u.role}</span>
+                    </div>
+                    <div className="card-row">
+                      <span className="card-label">Created:</span>
+                      <span className="card-value">{formatDate(u.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
