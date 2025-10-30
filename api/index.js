@@ -8,10 +8,7 @@ const app = express();
 const authRoutes = require("./routes/auth");
 const registrationRoutes = require("./routes/registration");
 const verifyTokenRoutes = require("./routes/verify-token");
-const librarianOverviewRoutes = require("./routes/librarian/home_overview/overview"); // ✅ NEW IMPORT
-
-// ===== STATIC FILES =====
-app.use(express.static(path.join(__dirname, "..", "dist")));
+const librarianOverviewRoutes = require("./routes/librarian/home_overview/overview");
 
 // ===== MIDDLEWARE =====
 app.use(express.json());
@@ -19,11 +16,14 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://librax-website.onrender.com", // Your Render frontend
+      "https://librax-website.onrender.com",
     ],
     credentials: true,
   })
 );
+
+// ===== STATIC FILES =====
+app.use(express.static(path.join(__dirname, "..", "dist")));
 
 // ===== HEALTH CHECK =====
 app.get("/api/health", (req, res) => {
@@ -34,10 +34,9 @@ app.get("/api/health", (req, res) => {
 authRoutes(app);
 registrationRoutes(app);
 verifyTokenRoutes(app);
-librarianOverviewRoutes(app); // ✅ ADDED ROUTE HERE
+librarianOverviewRoutes(app); // ✅ Mount librarian routes
 
-// ===== SPA CATCH-ALL ROUTE =====
-// This should be placed AFTER all API routes, BEFORE error handling
+// ===== SPA CATCH-ALL =====
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "dist", "index.html"));
 });
