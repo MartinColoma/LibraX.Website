@@ -36,7 +36,7 @@ authRoutes(app);
 registrationRoutes(app);
 verifyTokenRoutes(app);
 librarianOverviewRoutes(app); // ✅ Mount librarian routes
-librarianNewBookRoutes(app); // ✅ Mount librarian routes
+newBooksRoute(app); // ✅ Mount librarian routes
 
 // ===== SPA CATCH-ALL =====
 app.get("*", (req, res) => {
