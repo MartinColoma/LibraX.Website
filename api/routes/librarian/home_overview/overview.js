@@ -6,8 +6,8 @@ router.get("/api/librarian/overview/recent-users", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        id,
-        name,
+        user_id AS id,
+        CONCAT(first_name, ' ', last_name) AS name,
         email,
         user_type AS role,
         status,

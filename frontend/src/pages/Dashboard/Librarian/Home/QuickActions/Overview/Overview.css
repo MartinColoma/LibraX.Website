@@ -1,62 +1,63 @@
+:root {
+  --muji-red: #6d1f25;
+  --muji-brown: #7d5a44;
+  --muji-grey: #bfb8af;
+  --muji-ivory: #f5f3ee;
+  --muji-dark: #1f1f1f;
+}
+
 .overview-container {
   background-color: var(--muji-ivory);
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  color: var(--muji-dark);
-  font-family: "Inter", sans-serif;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .overview-container h2 {
   color: var(--muji-red);
-  margin-bottom: 1.2rem;
-  font-weight: 600;
-  text-align: left;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
 }
 
 .overview-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
   background-color: white;
-  border: 1px solid var(--muji-grey);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
 .overview-table th {
-  background-color: var(--muji-brown);
+  background-color: var(--muji-red);
   color: var(--muji-ivory);
   text-align: left;
-  padding: 0.75rem 1rem;
-  font-weight: 500;
+  padding: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .overview-table td {
-  padding: 0.75rem 1rem;
-  border-top: 1px solid var(--muji-grey);
-}
-
-.overview-table tr:nth-child(even) {
-  background-color: var(--muji-ivory);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--muji-grey);
+  color: var(--muji-dark);
+  font-size: 0.9rem;
 }
 
 .overview-table tr:hover {
-  background-color: rgba(125, 90, 68, 0.1);
-  transition: 0.2s ease;
+  background-color: var(--muji-ivory);
 }
 
 .status-badge {
-  padding: 0.3rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
   text-transform: capitalize;
 }
 
 .status-badge.active {
-  background-color: var(--muji-red);
-  color: var(--muji-ivory);
+  background-color: var(--muji-brown);
+  color: white;
 }
 
 .status-badge.inactive {

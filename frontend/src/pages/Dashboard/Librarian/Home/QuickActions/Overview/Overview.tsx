@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./Overview.css";
 
 interface User {
-  id: number;
+  id: string; // matches user_id from DB
   name: string;
   email: string;
   role: string;
@@ -37,7 +37,7 @@ const Overview: React.FC = () => {
 
   return (
     <div className="overview-container">
-      <h2>🧑‍💼 Recent User Accounts</h2>
+      <h2>👥 Recent User Accounts</h2>
       {users.length === 0 ? (
         <p>No users found.</p>
       ) : (
@@ -45,7 +45,7 @@ const Overview: React.FC = () => {
           <thead>
             <tr>
               <th>#</th>
-              <th>Name</th>
+              <th>Full Name</th>
               <th>Email</th>
               <th>Role</th>
               <th>Status</th>
@@ -62,13 +62,13 @@ const Overview: React.FC = () => {
                 <td>
                   <span
                     className={`status-badge ${
-                      u.status === "active" ? "active" : "inactive"
+                      u.status.toLowerCase() === "active" ? "active" : "inactive"
                     }`}
                   >
                     {u.status}
                   </span>
                 </td>
-                <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                <td>{new Date(u.created_at).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
