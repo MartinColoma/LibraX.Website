@@ -5,6 +5,7 @@ import usePageMeta from "../../../../hooks/usePageMeta";
 import Sidebar from "../Sidebar/Lib_Sidebar";
 import Overview from "./QuickActions/Overview/Overview";
 import Register from "./QuickActions/Register/Register";
+import NewBooks from "./QuickActions/NewBooks/NewBooks";
 
 const LibrarianDashboard: React.FC = () => {
   usePageMeta("User Dashboard - Home", "/LibraX Square Logo 1.png");
@@ -178,6 +179,7 @@ const LibrarianDashboard: React.FC = () => {
 
         {/* Quick Actions Tab Pane */}
         <div className="quick-actions">
+          <h2>Quick Actions</h2>
           <div className="tab-header">
             {["overview", "addBook", "registerMember", "bookRequest", "returnBook"].map((tab) => (
               <button
@@ -201,17 +203,17 @@ const LibrarianDashboard: React.FC = () => {
               </button>
             ))}
           </div>
-
-<div className="tab-content">
-  {activeQuickAction === "overview" ? (
-    <Overview />
-  ) : activeQuickAction === "registerMember" ? (
-    <Register />
-  ) : (
-    <p>Content for <strong>{activeQuickAction}</strong> goes here.</p>
-  )}
-</div>
-
+          <div className="tab-content">
+            {activeQuickAction === "overview" ? (
+              <Overview />
+            ) : activeQuickAction === "addBook" ? (
+              <NewBooks /> // 👈 Here’s the integration
+            ) : activeQuickAction === "registerMember" ? (
+              <Register />
+            ) : (
+              <p>Content for <strong>{activeQuickAction}</strong> goes here.</p>
+            )}
+          </div>
         </div>
 
       </main>

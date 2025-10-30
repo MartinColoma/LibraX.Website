@@ -8,7 +8,7 @@ import RegisterPage from '../Registration/UserRegistration';
 
 
 const Home: React.FC = () => {
-  usePageMeta("LibraX | AIoT Library Kiosk", "LibraX Square Logo 1.png");
+  usePageMeta("LibraX Web", "LibraX Square Logo 1.png");
   const navigate = useNavigate();
   const location = useLocation();
 

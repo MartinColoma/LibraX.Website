@@ -9,7 +9,8 @@ LibraX
 │   └── routes
 │       ├── auth.js
 │       ├── librarian
-│       │   └── home_overview
+│       │   └── quick_actions
+│       │       ├── newbooks.js
 │       │       └── overview.js
 │       ├── registration.js
 │       └── verify-token.js
@@ -57,8 +58,12 @@ LibraX
 │   │   │   │   │   │   ├── Lib_Home.css
 │   │   │   │   │   │   ├── Lib_Home.tsx
 │   │   │   │   │   │   └── QuickActions
-│   │   │   │   │   │       ├── AddNewBooks
 │   │   │   │   │   │       ├── BookRequest
+│   │   │   │   │   │       │   ├── BookRequest.css
+│   │   │   │   │   │       │   └── BookRequest.tsx
+│   │   │   │   │   │       ├── NewBooks
+│   │   │   │   │   │       │   ├── NewBooks.css
+│   │   │   │   │   │       │   └── NewBooks.tsx
 │   │   │   │   │   │       ├── Overview
 │   │   │   │   │   │       │   ├── Overview.css
 │   │   │   │   │   │       │   └── Overview.tsx
@@ -75,7 +80,6 @@ LibraX
 │   │   │   │   │       └── Lib_Sidebar.tsx
 │   │   │   │   └── User
 │   │   │   │       ├── Home
-│   │   │   │       │   ├── HomeBackup.tsx
 │   │   │   │       │   ├── User_Home.css
 │   │   │   │       │   └── User_Home.tsx
 │   │   │   │       └── Sidebar

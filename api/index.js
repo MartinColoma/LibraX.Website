@@ -8,7 +8,8 @@ const app = express();
 const authRoutes = require("./routes/auth");
 const registrationRoutes = require("./routes/registration");
 const verifyTokenRoutes = require("./routes/verify-token");
-const librarianOverviewRoutes = require("./routes/librarian/home_overview/overview");
+const librarianOverviewRoutes = require("./routes/librarian/quick_actions/overview");
+const newBooksRoute = require("./routes/librarian/quick_actions/newbooks");
 
 // ===== MIDDLEWARE =====
 app.use(express.json());
@@ -35,6 +36,7 @@ authRoutes(app);
 registrationRoutes(app);
 verifyTokenRoutes(app);
 librarianOverviewRoutes(app); // ✅ Mount librarian routes
+librarianNewBookRoutes(app); // ✅ Mount librarian routes
 
 // ===== SPA CATCH-ALL =====
 app.get("*", (req, res) => {
