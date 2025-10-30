@@ -31,9 +31,7 @@ module.exports = (app) => {
       } = req.body;
 
       if (!title || !isbn) {
-        return res
-          .status(400)
-          .json({ message: "Title and ISBN are required." });
+        return res.status(400).json({ message: "Title and ISBN are required." });
       }
 
       // === 1️⃣ Insert book ===
@@ -41,7 +39,7 @@ module.exports = (app) => {
         .from("books")
         .insert([
           {
-            book_id: isbn, // Still using ISBN as unique book identifier
+            book_id: isbn,
             title,
             subtitle,
             isbn,
@@ -60,7 +58,6 @@ module.exports = (app) => {
 
       // === 2️⃣ Insert or fetch authors ===
       let authorIds = [];
-
       for (const authorName of authors) {
         if (!authorName.trim()) continue;
 
@@ -81,6 +78,7 @@ module.exports = (app) => {
             .insert([{ name: authorName.trim() }])
             .select()
             .single();
+
           if (insertErr) throw insertErr;
           authorId = newAuthor.author_id;
         }
@@ -102,13 +100,14 @@ module.exports = (app) => {
         if (linkErr) throw linkErr;
       }
 
-      // === 4️⃣ Add copies (generate short unique IDs) ===
+      // === 4️⃣ Add book copies ===
       const copiesArr = Array.from({ length: copies }, () => {
-        const copyId = uuidv4().replace(/-/g, "").slice(0, 11); // trimmed UUID
+        const copyId = uuidv4().replace(/-/g, "").slice(0, 11); // Trim to 11 chars
         return {
-          copy_id: copyId, // safe for VARCHAR(11)
+          copy_id: copyId,
           book_id: newBook.book_id,
-          available: true,
+          nfc_uid: copyId, // temporary placeholder since NOT NULL
+          status: "Available",
         };
       });
 
@@ -132,7 +131,6 @@ module.exports = (app) => {
 
   /**
    * GET /api/librarian/quick_actions/newbooks/categories
-   * Fetch categories for category combobox
    */
   router.get("/categories", async (req, res) => {
     try {
@@ -149,6 +147,6 @@ module.exports = (app) => {
     }
   });
 
-  // Mount route (DO NOT CHANGE)
+  // Mount route
   app.use("/api/librarian/quick_actions/newbooks", router);
 };
