@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./NewBooks.css";
-import { Loader2, Upload, Plus, X } from "lucide-react";
+import { Loader2, Upload, Plus, X, ChevronDown } from "lucide-react";
 import usePageMeta from "../../../../../../hooks/usePageMeta";
 
 const NewBooks: React.FC = () => {
@@ -9,6 +9,10 @@ const NewBooks: React.FC = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<any[]>([]);
+  const [showCategoryList, setShowCategoryList] = useState(false);
+  const [showTypeList, setShowTypeList] = useState(false);
 
   // === FORM STATES ===
   const [book, setBook] = useState({
@@ -28,7 +32,39 @@ const NewBooks: React.FC = () => {
   // Dynamic authors array
   const [authors, setAuthors] = useState<string[]>([""]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // === FETCH CATEGORIES FROM BACKEND ===
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(
+          "https://librax-backend.onrender.com/api/librarian/quick_actions/newbooks/categories"
+        );
+        const data = await res.json();
+        setCategories(data.categories || []);
+      } catch (err) {
+        console.error("❌ Failed to fetch categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // === FILTER CATEGORIES BY TYPE ===
+  useEffect(() => {
+    if (book.categoryType) {
+      const filtered = categories.filter(
+        (c) =>
+          c.category_type.toLowerCase() === book.categoryType.toLowerCase()
+      );
+      setFilteredCategories(filtered);
+    } else {
+      setFilteredCategories([]);
+    }
+  }, [book.categoryType, categories]);
+
+  // === FORM HANDLERS ===
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setBook((prev) => ({ ...prev, [name]: value }));
   };
@@ -39,13 +75,10 @@ const NewBooks: React.FC = () => {
     setAuthors(updated);
   };
 
-  const addAuthorField = () => {
-    setAuthors([...authors, ""]);
-  };
+  const addAuthorField = () => setAuthors([...authors, ""]);
 
-  const removeAuthorField = (index: number) => {
+  const removeAuthorField = (index: number) =>
     setAuthors(authors.filter((_, i) => i !== index));
-  };
 
   const clearAll = () => {
     setBook({
@@ -73,7 +106,7 @@ const NewBooks: React.FC = () => {
 
     try {
       const res = await fetch(
-        "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks",
+        "https://librax-backend.onrender.com/api/librarian/quick_actions/newbooks",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -87,7 +120,7 @@ const NewBooks: React.FC = () => {
             edition: book.edition,
             language: book.language,
             categoryId: book.category,
-            authors: authors.filter((a) => a.trim() !== ""), // ← dynamic author array
+            authors: authors.filter((a) => a.trim() !== ""),
             copies: parseInt(book.copies) || 1,
           }),
         }
@@ -118,6 +151,7 @@ const NewBooks: React.FC = () => {
                 MARC Upload <Upload size={16} />
               </button>
             </div>
+
             <label>Book Title:</label>
             <input
               name="title"
@@ -126,6 +160,7 @@ const NewBooks: React.FC = () => {
               placeholder="Enter the full title of the book"
               required
             />
+
             <label>Subtitle:</label>
             <input
               name="subtitle"
@@ -133,6 +168,7 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter the subtitle of the book"
             />
+
             <label>ISBN Number:</label>
             <input
               name="isbn"
@@ -140,6 +176,7 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter ISBN number of the book"
             />
+
             <label>Description (optional):</label>
             <textarea
               name="description"
@@ -151,6 +188,11 @@ const NewBooks: React.FC = () => {
         );
 
       case 2:
+        // === COMBOBOX STEP ===
+        const uniqueCategoryTypes = Array.from(
+          new Set(categories.map((c) => c.category_type))
+        );
+
         return (
           <>
             <h2>Add New Book</h2>
@@ -161,6 +203,7 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter publisher names"
             />
+
             <label>Publication Year:</label>
             <input
               type="date"
@@ -168,6 +211,7 @@ const NewBooks: React.FC = () => {
               value={book.publicationYear}
               onChange={handleChange}
             />
+
             <label>Edition:</label>
             <input
               name="edition"
@@ -175,20 +219,72 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter book edition"
             />
-            <label>Category:</label>
-            <input
-              name="category"
-              value={book.category}
-              onChange={handleChange}
-              placeholder="Choose a category/genre"
-            />
+
+            {/* === Category Type Combobox === */}
             <label>Category Type:</label>
-            <input
-              name="categoryType"
-              value={book.categoryType}
-              onChange={handleChange}
-              placeholder="Choose a category type"
-            />
+            <div className="combobox">
+              <input
+                name="categoryType"
+                value={book.categoryType}
+                onChange={handleChange}
+                placeholder="Select or type a category type"
+                onFocus={() => setShowTypeList(true)}
+                onBlur={() => setTimeout(() => setShowTypeList(false), 200)}
+              />
+              <ChevronDown className="dropdown-icon" />
+              {showTypeList && (
+                <ul className="dropdown-list">
+                  {uniqueCategoryTypes.map((type) => (
+                    <li
+                      key={type}
+                      onClick={() => {
+                        setBook((prev) => ({
+                          ...prev,
+                          categoryType: type,
+                          category: "",
+                        }));
+                        setShowTypeList(false);
+                      }}
+                    >
+                      {type}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* === Category Combobox === */}
+            <label>Category:</label>
+            <div className="combobox">
+              <input
+                name="category"
+                value={book.category}
+                onChange={handleChange}
+                placeholder="Select or type a category"
+                onFocus={() => setShowCategoryList(true)}
+                onBlur={() => setTimeout(() => setShowCategoryList(false), 200)}
+              />
+              <ChevronDown className="dropdown-icon" />
+              {showCategoryList && filteredCategories.length > 0 && (
+                <ul className="dropdown-list">
+                  {filteredCategories.map((cat) => (
+                    <li
+                      key={cat.category_id}
+                      onClick={() => {
+                        setBook((prev) => ({
+                          ...prev,
+                          category: cat.category_id,
+                        }));
+                        setShowCategoryList(false);
+                      }}
+                    >
+                      {cat.category_name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             <label>Language:</label>
             <input
               name="language"
@@ -254,13 +350,21 @@ const NewBooks: React.FC = () => {
           </button>
 
           {step > 1 && (
-            <button type="button" className="back-btn" onClick={() => setStep(step - 1)}>
+            <button
+              type="button"
+              className="back-btn"
+              onClick={() => setStep(step - 1)}
+            >
               Back
             </button>
           )}
 
           {step < 3 ? (
-            <button type="button" className="next-btn" onClick={() => setStep(step + 1)}>
+            <button
+              type="button"
+              className="next-btn"
+              onClick={() => setStep(step + 1)}
+            >
               Next
             </button>
           ) : (
@@ -276,18 +380,47 @@ const NewBooks: React.FC = () => {
       {/* === LIVE PREVIEW === */}
       <div className="preview-section">
         <h2>New Book Preview</h2>
-        <p><strong>Book Title:</strong> {book.title || "[The Title of the Book]"}</p>
-        <p><strong>Subtitle:</strong> {book.subtitle || "[Subtitle of the book]"}</p>
-        <p><strong>ISBN Number:</strong> {book.isbn || "0000000000"}</p>
-        <p><strong>Author(s):</strong> {authors.filter(Boolean).join(", ") || "[Author(s) Names]"}</p>
-        <p><strong>Publisher:</strong> {book.publisher || "[Publisher names]"}</p>
-        <p><strong>Publication Year:</strong> {book.publicationYear || "[YYYY-MM-DD]"}</p>
-        <p><strong>Edition:</strong> {book.edition || "[Edition]"}</p>
-        <p><strong>Category:</strong> {book.category || "[Category]"}</p>
-        <p><strong>Category Type:</strong> {book.categoryType || "[Category Type]"}</p>
-        <p><strong>Language:</strong> {book.language || "[Language]"}</p>
-        <p><strong>Quantity Available:</strong> {book.copies || "0"}</p>
-        <p><strong>Description:</strong> {book.description || "[Description of the book]"} </p>
+        <p>
+          <strong>Book Title:</strong>{" "}
+          {book.title || "[The Title of the Book]"}
+        </p>
+        <p>
+          <strong>Subtitle:</strong> {book.subtitle || "[Subtitle of the book]"}
+        </p>
+        <p>
+          <strong>ISBN Number:</strong> {book.isbn || "0000000000"}
+        </p>
+        <p>
+          <strong>Author(s):</strong>{" "}
+          {authors.filter(Boolean).join(", ") || "[Author(s) Names]"}
+        </p>
+        <p>
+          <strong>Publisher:</strong> {book.publisher || "[Publisher names]"}
+        </p>
+        <p>
+          <strong>Publication Year:</strong>{" "}
+          {book.publicationYear || "[YYYY-MM-DD]"}
+        </p>
+        <p>
+          <strong>Edition:</strong> {book.edition || "[Edition]"}
+        </p>
+        <p>
+          <strong>Category:</strong> {book.category || "[Category]"}
+        </p>
+        <p>
+          <strong>Category Type:</strong>{" "}
+          {book.categoryType || "[Category Type]"}
+        </p>
+        <p>
+          <strong>Language:</strong> {book.language || "[Language]"}
+        </p>
+        <p>
+          <strong>Quantity Available:</strong> {book.copies || "0"}
+        </p>
+        <p>
+          <strong>Description:</strong>{" "}
+          {book.description || "[Description of the book]"}{" "}
+        </p>
       </div>
     </div>
   );

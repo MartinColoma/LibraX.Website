@@ -235,3 +235,43 @@ button {
 .add-author-btn:hover {
   background-color: #c79458;
 }
+.combobox {
+  position: relative;
+}
+
+.combobox input {
+  width: 100%;
+  padding-right: 30px;
+}
+
+.dropdown-icon {
+  position: absolute;
+  right: 10px;
+  top: 35%;
+  pointer-events: none;
+  color: #6b4f3b;
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: #222;
+  color: #fff;
+  border-radius: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.dropdown-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dropdown-list li:hover {
+  background: #444;
+}

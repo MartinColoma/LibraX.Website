@@ -41,7 +41,7 @@ module.exports = (app) => {
         .from("books")
         .insert([
           {
-            book_id: isbn, // Assuming ISBN is the unique identifier
+            book_id: isbn,
             title,
             subtitle,
             isbn,
@@ -60,11 +60,9 @@ module.exports = (app) => {
 
       // === 2️⃣ Insert or fetch authors ===
       let authorIds = [];
-
       for (const authorName of authors) {
         if (!authorName.trim()) continue;
 
-        // Check if author exists
         const { data: existingAuthor, error: findErr } = await supabase
           .from("authors")
           .select("author_id")
@@ -82,7 +80,6 @@ module.exports = (app) => {
             .insert([{ name: authorName.trim() }])
             .select()
             .single();
-
           if (insertErr) throw insertErr;
           authorId = newAuthor.author_id;
         }
@@ -96,11 +93,9 @@ module.exports = (app) => {
           book_id: newBook.book_id,
           author_id: id,
         }));
-
         const { error: linkErr } = await supabase
           .from("book_authors")
           .insert(authorLinks);
-
         if (linkErr) throw linkErr;
       }
 
@@ -123,6 +118,25 @@ module.exports = (app) => {
       });
     } catch (err) {
       console.error("❌ Error adding book:", err);
+      res.status(500).json({ message: err.message || "Server error." });
+    }
+  });
+
+  /**
+   * GET /api/librarian/quick_actions/newbooks/categories
+   * Fetch categories for category combobox
+   */
+  router.get("/categories", async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("category_id, category_name, category_type");
+
+      if (error) throw error;
+
+      res.status(200).json({ categories: data });
+    } catch (err) {
+      console.error("❌ Error fetching categories:", err);
       res.status(500).json({ message: err.message || "Server error." });
     }
   });
