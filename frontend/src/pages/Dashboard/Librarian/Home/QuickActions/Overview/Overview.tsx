@@ -28,7 +28,7 @@ const Overview: React.FC = () => {
     const fetchRecentUsers = async () => {
     try {
       const res = await fetch(
-        "https://librax-backend.onrender.com/api/librarian/overview/recent-users",
+        "https://librax-website-frontend.onrender.com/api/librarian/overview/recent-users",
         {
           method: "GET",
           headers: {
