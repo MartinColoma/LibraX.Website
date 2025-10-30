@@ -77,8 +77,8 @@ module.exports = (app) => {
         copies,
       } = req.body;
 
-      if (!isbn || !title) {
-        return res.status(400).json({ message: "Title and ISBN required" });
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
       }
 
       console.log("📘 Adding new book:", title);
@@ -86,7 +86,10 @@ module.exports = (app) => {
       // Step 1️⃣: Generate Book ID
       const bookId = generateBookId();
 
-      // Step 2️⃣: Insert book
+      // Step 2️⃣: Determine copies
+      const totalCopies = copies && copies > 0 ? copies : 1;
+
+      // Step 3️⃣: Insert book with available_copies & total_copies
       const { error: bookError } = await supabase.from("books").insert([
         {
           book_id: bookId,
@@ -99,11 +102,13 @@ module.exports = (app) => {
           edition,
           language,
           category_id: categoryId,
+          total_copies: totalCopies,
+          available_copies: totalCopies, // all copies available initially
         },
       ]);
       if (bookError) throw bookError;
 
-      // Step 3️⃣: Handle authors (reuse if existing, insert if new)
+      // Step 4️⃣: Handle authors (reuse if existing, insert if new)
       const authorIds = [];
       for (const name of authors || []) {
         if (!name.trim()) continue;
@@ -132,7 +137,7 @@ module.exports = (app) => {
         authorIds.push(authorId);
       }
 
-      // Step 4️⃣: Link authors to book
+      // Step 5️⃣: Link authors to book
       for (const id of authorIds) {
         const { error: mapErr } = await supabase
           .from("book_authors")
@@ -140,17 +145,14 @@ module.exports = (app) => {
         if (mapErr) throw mapErr;
       }
 
-      // Step 5️⃣: Insert book copies (auto-increment style IDs)
-      const totalCopies = copies && copies > 0 ? copies : 1;
+      // Step 6️⃣: Insert book copies (bookId + incremented suffix)
       const copiesToInsert = [];
-
       for (let i = 1; i <= totalCopies; i++) {
-        const suffix = String(i).padStart(5, "0"); // e.g., 00001
-        const copyId = `${bookId}${suffix}`;
+        const suffix = String(i).padStart(5, "0"); // 00001, 00002...
         copiesToInsert.push({
-          copy_id: copyId,
+          copy_id: `${bookId}${suffix}`,
           book_id: bookId,
-          nfc_uid: null, // will be populated later via NFC scan
+          nfc_uid: null, // for future NFC scanning
         });
       }
 
