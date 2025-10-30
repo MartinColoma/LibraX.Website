@@ -1,196 +1,237 @@
-:root {
-  --muji-red: #7a1c1c;
-  --muji-brown: #8c5c3d;
-  --muji-ivory: #f8f5f2;
-  --muji-grey: #c7bfb6;
-  --muji-dark: #3e3a37;
-}
-
-.newBooks-page {
+/* === Root Container === */
+.newBooks-wrapper {
   display: flex;
-  justify-content: center;
-  background-color: var(--muji-ivory);
-  min-height: 100vh;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: #f7eee5; /* soft beige */
+  color: #3b0b0b; /* dark maroon text */
+  padding: 2rem 3rem;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(75, 50, 30, 0.1);
   font-family: "Inter", sans-serif;
-  padding: 40px 0;
 }
 
-.newBooks-container {
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  padding: 32px;
-  width: 90%;
-  max-width: 1100px;
-  color: var(--muji-dark);
-  transition: all 0.3s ease;
-}
-
-.newBooks-container h2 {
-  color: var(--muji-red);
-  font-weight: 700;
-  font-size: 1.5rem;
-  margin-bottom: 24px;
-  border-bottom: 2px solid var(--muji-brown);
-  padding-bottom: 8px;
-}
-
-.newBooks-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-
-.form-row {
-  flex: 1 1 45%;
+/* === Left Form Section === */
+.form-section {
+  flex: 1;
+  max-width: 48%;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  background-color: #fbf6f2;
+  padding: 1.5rem 2rem;
+  border-radius: 8px;
+  border-right: 1px solid #e0cfc0;
 }
 
-.form-row label {
+/* Header & MARC Upload */
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.form-header h2 {
+  color: #751b1b;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.marc-upload-btn {
+  background-color: #6b1d1d;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.marc-upload-btn:hover {
+  background-color: #9e3232;
+}
+
+/* Labels & Inputs */
+label {
   font-weight: 600;
-  color: var(--muji-dark);
+  margin-top: 1rem;
+  margin-bottom: 0.3rem;
   font-size: 0.95rem;
 }
 
-.form-row input,
-.form-row textarea {
-  margin-top: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--muji-grey);
-  border-radius: 8px;
-  background-color: var(--muji-ivory);
-  color: var(--muji-dark);
-  font-size: 0.9rem;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.form-row input:focus,
-.form-row textarea:focus {
-  border-color: var(--muji-brown);
-  background-color: #fff;
+input,
+textarea {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #c9b8a8;
+  background-color: #fffdfc;
+  font-size: 0.95rem;
   outline: none;
+  transition: border 0.2s ease-in-out;
 }
 
-/* === Authors Section === */
-.authors-section {
-  flex: 1 1 100%;
+input:focus,
+textarea:focus {
+  border-color: #aa6f4c;
+  box-shadow: 0 0 0 1px #aa6f4c3b;
+}
+
+textarea {
+  resize: none;
+  height: 5rem;
+}
+
+/* === Navigation Buttons === */
+.form-buttons {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.authors-section label {
-  font-weight: 600;
-  color: var(--muji-dark);
-}
-
-.author-field {
-  display: flex;
+  justify-content: flex-end;
   align-items: center;
-  gap: 8px;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
 }
 
-.author-field input {
-  flex: 1;
-}
-
-.add-author-btn,
-.remove-author-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border: none;
-  background: none;
-  cursor: pointer;
+button {
   font-weight: 600;
-  font-size: 0.9rem;
-  transition: color 0.3s ease;
-}
-
-.add-author-btn {
-  color: var(--muji-red);
-}
-
-.add-author-btn:hover {
-  color: #58191f;
-}
-
-.remove-author-btn {
-  color: var(--muji-brown);
-}
-
-.remove-author-btn:hover {
-  color: var(--muji-red);
-}
-
-/* === Submit Section === */
-.form-actions {
-  flex-basis: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.form-actions button {
-  background-color: var(--muji-brown);
-  color: #fff;
-  padding: 10px 20px;
+  font-size: 0.95rem;
+  padding: 0.6rem 1.4rem;
   border-radius: 8px;
   border: none;
-  font-weight: 600;
-  font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.2s ease-in-out;
 }
 
-.form-actions button:hover {
-  background-color: var(--muji-red);
-}
-
-.form-actions button:disabled {
-  background-color: var(--muji-grey);
-  cursor: not-allowed;
-}
-
-.status-msg {
-  font-size: 0.9rem;
+/* Button styles */
+.clear-btn {
+  background: none;
+  color: #6e4b2f;
+  margin-right: auto;
   font-weight: 600;
 }
 
-.status-msg:has(> :contains("✅")) {
-  color: #357a38;
+.clear-btn:hover {
+  text-decoration: underline;
 }
 
-.status-msg:has(> :contains("❌")) {
-  color: var(--muji-red);
+.back-btn {
+  background-color: #aaa;
+  color: #fff;
 }
 
+.back-btn:hover {
+  background-color: #888;
+}
+
+.next-btn {
+  background-color: #b1834b;
+  color: #fff;
+}
+
+.next-btn:hover {
+  background-color: #c89a61;
+}
+
+.add-btn {
+  background-color: #b1834b;
+  color: white;
+}
+
+.add-btn:hover {
+  background-color: #d7a45c;
+}
+
+/* Loader icon rotation */
 .spin {
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
   to {
     transform: rotate(360deg);
   }
 }
 
-/* === Responsive === */
-@media (max-width: 768px) {
-  .newBooks-container {
-    padding: 20px;
-  }
+/* === Status Message === */
+.status-msg {
+  margin-top: 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #5a1d1d;
+}
 
-  .form-row {
-    flex: 1 1 100%;
-  }
+/* === Right Preview Section === */
+.preview-section {
+  flex: 1;
+  max-width: 50%;
+  background-color: #fbf6f2;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-left: 2rem;
+  border-left: 1px solid #e0cfc0;
+}
 
-  .form-actions button {
-    width: 100%;
-  }
+.preview-section h2 {
+  color: #751b1b;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.preview-section p {
+  font-size: 0.95rem;
+  margin: 0.3rem 0;
+  color: #3b0b0b;
+  line-height: 1.5;
+}
+
+.preview-section strong {
+  font-weight: 700;
+  color: #4b1d1d;
+}
+.author-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.remove-author-btn {
+  background: #d95c5c;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.remove-author-btn:hover {
+  background: #b83c3c;
+}
+
+.add-author-btn {
+  margin-top: 0.6rem;
+  background-color: #b1834b;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.add-author-btn:hover {
+  background-color: #c79458;
 }

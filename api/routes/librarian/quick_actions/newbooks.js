@@ -1,155 +1,132 @@
+// api/routes/librarian/quick_actions/newbooks.js
+const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
-const crypto = require("crypto");
+require("dotenv").config();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-function generateBookId() {
-  const year = new Date().getFullYear().toString().slice(-2);
-  const random = Math.floor(100000 + Math.random() * 900000);
-  return `B${year}${random}`; // e.g. B2501234
-}
+module.exports = (app) => {
+  const router = express.Router();
 
-function generateCopyId(bookId, index) {
-  return `${bookId}-C${String(index + 1).padStart(3, "0")}`;
-}
-
-function generateLogId() {
-  const random = crypto.randomBytes(3).toString("hex").toUpperCase();
-  return `LOG-${random}`;
-}
-
-module.exports = function newBooksRoute(app) {
-  app.post("/api/librarian/quick_actions/newbooks", async (req, res) => {
-    const {
-      isbn,
-      title,
-      subtitle,
-      description,
-      publisher,
-      publicationYear,
-      edition,
-      categoryId,
-      language,
-      authors = [],
-      copies = 1,
-      performedBy = "Librarian",
-    } = req.body;
-
-    if (!title) {
-      return res.status(400).json({ message: "❌ Missing required field: title" });
-    }
-
-    const bookId = generateBookId();
-
+  /**
+   * POST /api/librarian/quick_actions/newbooks
+   * Adds a new book and related data (authors, category, copies)
+   */
+  router.post("/", async (req, res) => {
     try {
-      // 1️⃣ Insert into books
-      const { data: bookData, error: bookError } = await supabase
+      const {
+        isbn,
+        title,
+        subtitle,
+        description,
+        publisher,
+        publicationYear,
+        edition,
+        language,
+        categoryId,
+        authors = [],
+        copies = 1,
+      } = req.body;
+
+      if (!title || !isbn) {
+        return res
+          .status(400)
+          .json({ message: "Title and ISBN are required." });
+      }
+
+      // === 1️⃣ Insert book ===
+      const { data: bookData, error: bookErr } = await supabase
         .from("books")
         .insert([
           {
-            book_id: bookId,
-            isbn: isbn || null,
+            book_id: isbn, // Assuming ISBN is the unique identifier
             title,
-            subtitle: subtitle || null,
-            description: description || null,
-            publisher: publisher || null,
+            subtitle,
+            isbn,
+            description,
+            publisher,
             publication_year: publicationYear || null,
-            edition: edition || null,
+            edition,
+            language,
             category_id: categoryId || null,
-            language: language || "English",
           },
         ])
-        .select()
-        .single();
+        .select();
 
-      if (bookError) throw bookError;
+      if (bookErr) throw bookErr;
+      const newBook = bookData[0];
 
-      // 2️⃣ Handle Authors
-      const authorLinks = [];
+      // === 2️⃣ Insert or fetch authors ===
+      let authorIds = [];
+
       for (const authorName of authors) {
+        if (!authorName.trim()) continue;
+
         // Check if author exists
-        const { data: existingAuthor } = await supabase
+        const { data: existingAuthor, error: findErr } = await supabase
           .from("authors")
           .select("author_id")
-          .eq("name", authorName)
-          .single();
+          .eq("name", authorName.trim())
+          .maybeSingle();
+
+        if (findErr) throw findErr;
 
         let authorId;
         if (existingAuthor) {
           authorId = existingAuthor.author_id;
         } else {
-          // Insert new author
-          const { data: newAuthor, error: authorError } = await supabase
+          const { data: newAuthor, error: insertErr } = await supabase
             .from("authors")
-            .insert([{ name: authorName }])
-            .select("author_id")
+            .insert([{ name: authorName.trim() }])
+            .select()
             .single();
 
-          if (authorError) throw authorError;
+          if (insertErr) throw insertErr;
           authorId = newAuthor.author_id;
         }
 
-        // Link author to book
-        const { error: linkError } = await supabase
+        authorIds.push(authorId);
+      }
+
+      // === 3️⃣ Link authors to the book ===
+      if (authorIds.length > 0) {
+        const authorLinks = authorIds.map((id) => ({
+          book_id: newBook.book_id,
+          author_id: id,
+        }));
+
+        const { error: linkErr } = await supabase
           .from("book_authors")
-          .insert([{ book_id: bookId, author_id: authorId }]);
-        if (linkError) throw linkError;
+          .insert(authorLinks);
 
-        authorLinks.push(authorId);
+        if (linkErr) throw linkErr;
       }
 
-      // 3️⃣ Create Copies
-      const copyEntries = [];
-      for (let i = 0; i < copies; i++) {
-        const copyId = generateCopyId(bookId, i);
-        const barcode = Math.floor(100000000000 + Math.random() * 900000000000);
+      // === 4️⃣ Add copies ===
+      const copiesArr = Array.from({ length: copies }, () => ({
+        book_id: newBook.book_id,
+        available: true,
+      }));
 
-        const { error: copyError } = await supabase
-          .from("book_copies")
-          .insert([
-            {
-              copy_id: copyId,
-              book_id: bookId,
-              barcode,
-              status: "Available",
-              book_condition: "Good",
-              location: "Main Shelf",
-            },
-          ]);
-        if (copyError) throw copyError;
+      const { error: copyErr } = await supabase
+        .from("book_copies")
+        .insert(copiesArr);
+      if (copyErr) throw copyErr;
 
-        // Log entry
-        const logId = generateLogId();
-        const { error: logError } = await supabase
-          .from("inventory_logs")
-          .insert([
-            {
-              log_id: logId,
-              copy_id: copyId,
-              action: "Added",
-              performed_by: performedBy,
-            },
-          ]);
-        if (logError) throw logError;
-
-        copyEntries.push(copyId);
-      }
-
-      return res.status(200).json({
-        message: "✅ New book successfully added",
-        book: bookData,
-        authors: authorLinks,
-        copies: copyEntries,
+      return res.status(201).json({
+        message: "✅ Book successfully added.",
+        book: newBook,
+        authors: authorIds,
+        copiesInserted: copies,
       });
     } catch (err) {
-      console.error("❌ Error adding new book:", err);
-      return res.status(500).json({
-        message: "❌ Failed to add new book",
-        error: err.message,
-      });
+      console.error("❌ Error adding book:", err);
+      res.status(500).json({ message: err.message || "Server error." });
     }
   });
+
+  // Mount route
+  app.use("/api/librarian/quick_actions/newbooks", router);
 };

@@ -18,7 +18,7 @@ public.book_authors (
 create table public.book_copies (
   copy_id character varying(20) not null,
   book_id character varying(11) null,
-  barcode bigint not null,
+  nfc_uid text not null,
   status character varying(20) null default 'Available'::character varying,
   book_condition character varying(20) null default 'Good'::character varying,
   location character varying(100) null default 'Main Shelf'::character varying,
