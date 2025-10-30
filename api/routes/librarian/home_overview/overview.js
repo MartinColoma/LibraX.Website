@@ -1,29 +1,28 @@
 const express = require("express");
 const router = express.Router();
 
-// 🧠 Fetch users summary for overview
-router.get("/api/librarian/overview", async (req, res) => {
+// 🧠 Fetch recent users for librarian overview
+router.get("/api/librarian/overview/recent-users", async (req, res) => {
   try {
-    const totalUsers = await pool.query("SELECT COUNT(*) FROM users");
-    const activeUsers = await pool.query("SELECT COUNT(*) FROM users WHERE status = 'Active'");
-    const inactiveUsers = await pool.query("SELECT COUNT(*) FROM users WHERE status = 'Inactive'");
-    const totalStudents = await pool.query("SELECT COUNT(*) FROM users WHERE user_type = 'student'");
-    const totalFaculty = await pool.query("SELECT COUNT(*) FROM users WHERE user_type = 'faculty'");
-    const totalStaff = await pool.query("SELECT COUNT(*) FROM users WHERE user_type = 'staff'");
+    const result = await pool.query(`
+      SELECT 
+        id,
+        name,
+        email,
+        user_type AS role,
+        status,
+        created_at
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
 
     res.json({
       success: true,
-      data: {
-        totalUsers: totalUsers.rows[0].count,
-        activeUsers: activeUsers.rows[0].count,
-        inactiveUsers: inactiveUsers.rows[0].count,
-        totalStudents: totalStudents.rows[0].count,
-        totalFaculty: totalFaculty.rows[0].count,
-        totalStaff: totalStaff.rows[0].count,
-      },
+      data: result.rows,
     });
   } catch (error) {
-    console.error("❌ Error fetching overview data:", error);
+    console.error("❌ Error fetching recent users:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 });

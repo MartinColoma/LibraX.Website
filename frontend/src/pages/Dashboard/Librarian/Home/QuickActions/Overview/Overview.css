@@ -1,49 +1,65 @@
-:root {
-  --muji-red: #6d1f25;
-  --muji-brown: #7d5a44;
-  --muji-grey: #bfb8af;
-  --muji-ivory: #f5f3ee;
-  --muji-dark: #1f1f1f;
-}
-
 .overview-container {
-  padding: 1.5rem;
   background-color: var(--muji-ivory);
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  color: var(--muji-dark);
+  font-family: "Inter", sans-serif;
 }
 
 .overview-container h2 {
-  color: var(--muji-dark);
-  margin-bottom: 1rem;
+  color: var(--muji-red);
+  margin-bottom: 1.2rem;
   font-weight: 600;
+  text-align: left;
 }
 
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+.overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  background-color: white;
+  border: 1px solid var(--muji-grey);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.overview-card {
-  border-radius: 12px;
-  padding: 1.2rem;
-  text-align: center;
+.overview-table th {
+  background-color: var(--muji-brown);
   color: var(--muji-ivory);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 500;
 }
 
-.overview-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+.overview-table td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--muji-grey);
 }
 
-.overview-card h3 {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
+.overview-table tr:nth-child(even) {
+  background-color: var(--muji-ivory);
 }
 
-.overview-card p {
-  font-size: 1.5rem;
-  font-weight: bold;
+.overview-table tr:hover {
+  background-color: rgba(125, 90, 68, 0.1);
+  transition: 0.2s ease;
+}
+
+.status-badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.active {
+  background-color: var(--muji-red);
+  color: var(--muji-ivory);
+}
+
+.status-badge.inactive {
+  background-color: var(--muji-grey);
+  color: var(--muji-dark);
 }

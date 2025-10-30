@@ -1,67 +1,79 @@
 import React, { useEffect, useState } from "react";
 import "./Overview.css";
 
-interface OverviewData {
-  totalUsers: number;
-  activeUsers: number;
-  inactiveUsers: number;
-  totalStudents: number;
-  totalFaculty: number;
-  totalStaff: number;
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  created_at: string;
 }
 
 const Overview: React.FC = () => {
-  const [data, setData] = useState<OverviewData | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOverview = async () => {
+    const fetchRecentUsers = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/librarian/overview`);
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/librarian/overview/recent-users`
+        );
         const json = await res.json();
         if (json.success) {
-          setData(json.data);
+          setUsers(json.data);
         }
       } catch (err) {
-        console.error("Error fetching overview:", err);
+        console.error("Error fetching recent users:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchOverview();
+    fetchRecentUsers();
   }, []);
 
-  if (loading) return <p>Loading overview data...</p>;
+  if (loading) return <p>Loading recent users...</p>;
 
   return (
     <div className="overview-container">
-      <h2>📊 User Overview</h2>
-      <div className="overview-grid">
-        <div className="overview-card" style={{ backgroundColor: "var(--muji-red)" }}>
-          <h3>Total Users</h3>
-          <p>{data?.totalUsers}</p>
-        </div>
-        <div className="overview-card" style={{ backgroundColor: "var(--muji-brown)" }}>
-          <h3>Active Users</h3>
-          <p>{data?.activeUsers}</p>
-        </div>
-        <div className="overview-card" style={{ backgroundColor: "var(--muji-grey)", color: "var(--muji-dark)" }}>
-          <h3>Inactive Users</h3>
-          <p>{data?.inactiveUsers}</p>
-        </div>
-        <div className="overview-card" style={{ backgroundColor: "var(--muji-ivory)", color: "var(--muji-dark)" }}>
-          <h3>Students</h3>
-          <p>{data?.totalStudents}</p>
-        </div>
-        <div className="overview-card" style={{ backgroundColor: "var(--muji-brown)" }}>
-          <h3>Faculty</h3>
-          <p>{data?.totalFaculty}</p>
-        </div>
-        <div className="overview-card" style={{ backgroundColor: "var(--muji-red)" }}>
-          <h3>Staff</h3>
-          <p>{data?.totalStaff}</p>
-        </div>
-      </div>
+      <h2>🧑‍💼 Recent User Accounts</h2>
+      {users.length === 0 ? (
+        <p>No users found.</p>
+      ) : (
+        <table className="overview-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Date Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u, index) => (
+              <tr key={u.id}>
+                <td>{index + 1}</td>
+                <td>{u.name}</td>
+                <td>{u.email}</td>
+                <td>{u.role}</td>
+                <td>
+                  <span
+                    className={`status-badge ${
+                      u.status === "active" ? "active" : "inactive"
+                    }`}
+                  >
+                    {u.status}
+                  </span>
+                </td>
+                <td>{new Date(u.created_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 };
