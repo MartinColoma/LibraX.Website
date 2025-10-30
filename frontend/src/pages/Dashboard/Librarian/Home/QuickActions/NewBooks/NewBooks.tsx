@@ -37,7 +37,7 @@ const NewBooks: React.FC = () => {
     const fetchCategories = async () => {
       try {
         const res = await fetch(
-          "https://librax-backend.onrender.com/api/librarian/quick_actions/newbooks/categories"
+          "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/categories"
         );
         const data = await res.json();
         setCategories(data.categories || []);
