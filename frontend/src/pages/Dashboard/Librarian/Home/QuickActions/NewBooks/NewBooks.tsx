@@ -13,6 +13,7 @@ const NewBooks: React.FC = () => {
   const [filteredCategories, setFilteredCategories] = useState<any[]>([]);
   const [showCategoryList, setShowCategoryList] = useState(false);
   const [showTypeList, setShowTypeList] = useState(false);
+  const [allAuthors, setAllAuthors] = useState<any[]>([]);
 
   // === FORM STATES ===
   const [book, setBook] = useState({
@@ -31,7 +32,20 @@ const NewBooks: React.FC = () => {
 
   // Dynamic authors array
   const [authors, setAuthors] = useState<string[]>([""]);
-
+    useEffect(() => {
+    const fetchAuthors = async () => {
+        try {
+        const res = await fetch(
+            "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/authors"
+        );
+        const data = await res.json();
+        setAllAuthors(data.authors || []);
+        } catch (err) {
+        console.error("❌ Failed to fetch authors:", err);
+        }
+    };
+    fetchAuthors();
+    }, []);
   // === FETCH CATEGORIES FROM BACKEND ===
   useEffect(() => {
     const fetchCategories = async () => {
@@ -99,23 +113,26 @@ const NewBooks: React.FC = () => {
     setStep(1);
   };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // 🚫 Only allow submission at final step
+    if (step < 3) return;
+
     setLoading(true);
     setMessage(null);
 
     try {
-        // Convert date to just year (int)
-        const pubYear = book.publicationYear
+      // Convert date to just year (int)
+      const pubYear = book.publicationYear
         ? parseInt(book.publicationYear.split("-")[0])
         : null;
 
-        const res = await fetch(
+      const res = await fetch(
         "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks",
         {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             isbn: book.isbn.trim(),
             title: book.title.trim(),
             subtitle: book.subtitle.trim(),
@@ -127,23 +144,22 @@ const NewBooks: React.FC = () => {
             categoryId: parseInt(book.category) || null,
             authors: authors.filter((a) => a.trim() !== ""),
             copies: parseInt(book.copies) || 1,
-            }),
+          }),
         }
-        );
+      );
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to add book");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to add book");
 
-        setMessage("✅ Book successfully added!");
-        clearAll();
+      setMessage("✅ Book successfully added!");
+      clearAll();
     } catch (err: any) {
-        console.error("❌ Error adding book:", err);
-        setMessage(`❌ ${err.message}`);
+      console.error("❌ Error adding book:", err);
+      setMessage(`❌ ${err.message}`);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-    };
-
+  };
 
   // === RENDER FORM STEPS ===
   const renderStep = () => {
@@ -194,7 +210,6 @@ const NewBooks: React.FC = () => {
         );
 
       case 2:
-        // === COMBOBOX STEP ===
         const uniqueCategoryTypes = Array.from(
           new Set(categories.map((c) => c.category_type))
         );
@@ -307,30 +322,40 @@ const NewBooks: React.FC = () => {
             <h2>Add New Book</h2>
             <label>Author(s):</label>
             {authors.map((author, index) => (
-              <div key={index} className="author-input-group">
+            <div key={index} className="author-input-group">
+                <div className="combobox">
                 <input
-                  value={author}
-                  onChange={(e) => handleAuthorChange(index, e.target.value)}
-                  placeholder={`Author ${index + 1}`}
+                    value={author}
+                    onChange={(e) => handleAuthorChange(index, e.target.value)}
+                    placeholder={`Author ${index + 1}`}
+                    list={`author-suggestions-${index}`}
                 />
+                <datalist id={`author-suggestions-${index}`}>
+                    {allAuthors
+                    .filter((a) =>
+                        a.name.toLowerCase().includes(author.toLowerCase())
+                    )
+                    .map((a) => (
+                        <option key={a.author_id} value={a.name} />
+                    ))}
+                </datalist>
+                </div>
+
                 {authors.length > 1 && (
-                  <button
+                <button
                     type="button"
                     className="remove-author-btn"
                     onClick={() => removeAuthorField(index)}
-                  >
+                >
                     <X size={16} />
-                  </button>
+                </button>
                 )}
-              </div>
+            </div>
             ))}
-            <button
-              type="button"
-              className="add-author-btn"
-              onClick={addAuthorField}
-            >
-              <Plus size={16} /> Add Another Author
+            <button type="button" className="add-author-btn" onClick={addAuthorField}>
+            <Plus size={16} /> Add Another Author
             </button>
+
 
             <label>Quantity Available:</label>
             <input
@@ -347,7 +372,13 @@ const NewBooks: React.FC = () => {
 
   return (
     <div className="newBooks-wrapper">
-      <form className="form-section" onSubmit={handleSubmit}>
+      <form
+        className="form-section"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (step === 3) handleSubmit(e);
+        }}
+      >
         {renderStep()}
 
         <div className="form-buttons">
@@ -359,7 +390,10 @@ const NewBooks: React.FC = () => {
             <button
               type="button"
               className="back-btn"
-              onClick={() => setStep(step - 1)}
+              onClick={(e) => {
+                e.preventDefault();
+                setStep(step - 1);
+              }}
             >
               Back
             </button>
@@ -369,7 +403,10 @@ const NewBooks: React.FC = () => {
             <button
               type="button"
               className="next-btn"
-              onClick={() => setStep(step + 1)}
+              onClick={(e) => {
+                e.preventDefault();
+                setStep(step + 1);
+              }}
             >
               Next
             </button>

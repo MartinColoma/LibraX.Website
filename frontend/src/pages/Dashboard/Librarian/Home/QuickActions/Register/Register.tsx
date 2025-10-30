@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Register.css";
+import usePageMeta from "../../../../../../hooks/usePageMeta";
+
 
 const Register: React.FC = () => {
+    usePageMeta("Home - Register New user", "/LibraX Square Logo 1.png");
+
   const [form, setForm] = useState({
     role: "",
     firstName: "",

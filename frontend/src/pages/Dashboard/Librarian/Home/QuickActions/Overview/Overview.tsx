@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./Overview.css";
+import usePageMeta from "../../../../../../hooks/usePageMeta";
 
 interface User {
   id: string;
@@ -11,6 +12,8 @@ interface User {
 }
 
 const Overview: React.FC = () => {
+    usePageMeta("Home - Overview", "/LibraX Square Logo 1.png");
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth <= 768);
