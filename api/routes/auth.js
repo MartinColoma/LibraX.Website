@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = "2m";
+const JWT_EXPIRES_IN = "120m";
 
 // Generate a 10-digit history ID
 function generateHistoryId() {

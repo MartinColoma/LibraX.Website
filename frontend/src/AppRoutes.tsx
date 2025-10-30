@@ -9,7 +9,7 @@ import LoginModal from "./pages/LandingPage/Login/LoginModal";
 import RegisterModal from "./pages/LandingPage/Registration/UserRegistration";
 
 // Librarian Pages
-import LibHome from "./pages/Dashboard/Librarian/Home/Dash_Home";
+import LibHome from "./pages/Dashboard/Librarian/Home/Lib_Home";
 
 // User Pages
 import UserHome from "./pages/Dashboard/User/Home/User_Home";
@@ -78,7 +78,7 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* ✅ Protected Member Routes */}
+        {/* ✅ Protected User Routes */}
         <Route
           path="/user/dashboard/home"
           element={

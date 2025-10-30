@@ -1,0 +1,167 @@
+/* ===========================================
+   Register Form - MUJI Dashboard Integrated
+   =========================================== */
+
+.register-form-container {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  padding: 24px;
+  color: var(--muji-dark);
+  font-family: "Inter", sans-serif;
+  transition: all 0.3s ease;
+}
+
+.register-form-container h2 {
+  color: var(--muji-red);
+  font-weight: 700;
+  font-size: 1.4rem;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--muji-brown);
+  padding-bottom: 8px;
+}
+
+/* === FORM STRUCTURE === */
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.form-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--muji-dark);
+}
+
+.form-row input,
+.form-row select {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--muji-grey);
+  border-radius: 8px;
+  background-color: var(--muji-ivory);
+  color: var(--muji-dark);
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+  border-color: var(--muji-brown);
+  background-color: #fff;
+  outline: none;
+}
+
+/* === NFC SECTION === */
+.nfc-section {
+  border: 1px dashed var(--muji-grey);
+  border-radius: 10px;
+  background-color: var(--muji-ivory);
+  padding: 20px;
+  text-align: center;
+}
+
+.nfc-section h3 {
+  color: var(--muji-brown);
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.nfc-section label {
+  display: block;
+  text-align: left;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.nfc-section input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--muji-grey);
+  border-radius: 8px;
+  background-color: #fff;
+  transition: 0.2s;
+}
+
+.nfc-section input:focus {
+  border-color: var(--muji-brown);
+}
+
+.nfc-btn {
+  margin-top: 14px;
+  padding: 10px 16px;
+  background-color: var(--muji-red);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.nfc-btn:hover {
+  background-color: #58191f;
+}
+
+.nfc-message {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--muji-brown);
+}
+
+/* === ACTIONS === */
+.form-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.form-actions button {
+  background-color: var(--muji-brown);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.form-actions button:hover {
+  background-color: var(--muji-red);
+}
+
+.form-actions button:disabled {
+  background-color: var(--muji-grey);
+  cursor: not-allowed;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .register-form-container {
+    padding: 16px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .nfc-section {
+    padding: 16px;
+  }
+}

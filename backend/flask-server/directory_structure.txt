@@ -50,11 +50,27 @@ LibraX
 │   │   ├── pages
 │   │   │   ├── Dashboard
 │   │   │   │   ├── Librarian
-│   │   │   │   │   └── Home
-│   │   │   │   │       ├── Dash_Home.css
-│   │   │   │   │       └── Dash_Home.tsx
+│   │   │   │   │   ├── Home
+│   │   │   │   │   │   ├── Lib_Home.css
+│   │   │   │   │   │   ├── Lib_Home.tsx
+│   │   │   │   │   │   └── QuickActions
+│   │   │   │   │   │       ├── AddNewBooks
+│   │   │   │   │   │       ├── BookRequest
+│   │   │   │   │   │       ├── Overview
+│   │   │   │   │   │       ├── Register
+│   │   │   │   │   │       │   ├── Register.module.css
+│   │   │   │   │   │       │   └── Register.tsx
+│   │   │   │   │   │       └── ReturnBooks
+│   │   │   │   │   ├── ManageBooks
+│   │   │   │   │   ├── ManageUsers
+│   │   │   │   │   │   ├── ManageUsers.css
+│   │   │   │   │   │   └── ManageUsers.tsx
+│   │   │   │   │   └── Sidebar
+│   │   │   │   │       ├── Lib_Sidebar.css
+│   │   │   │   │       └── Lib_Sidebar.tsx
 │   │   │   │   └── User
 │   │   │   │       ├── Home
+│   │   │   │       │   ├── HomeBackup.tsx
 │   │   │   │       │   ├── User_Home.css
 │   │   │   │       │   └── User_Home.tsx
 │   │   │   │       └── Sidebar

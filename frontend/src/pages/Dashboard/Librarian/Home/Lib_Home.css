@@ -1,0 +1,472 @@
+/* ===========================================
+   MUJI-Themed Dashboard + Sidebar Integration
+   Mobile Responsive Version
+   =========================================== */
+
+/* Custom MUJI Color Palette */
+:root {
+  --muji-red: #6d1f25;
+  --muji-brown: #7d5a44;
+  --muji-grey: #bfb8af;
+  --muji-ivory: #f5f3ee;
+  --muji-dark: #1f1f1f;
+}
+
+/* ===== PAGE LAYOUT ===== */
+.page-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--muji-ivory);
+}
+
+/* ===== MAIN CONTENT AREA ===== */
+.main-content {
+  flex-grow: 1;
+  padding: 24px;
+  transition: margin-left 0.3s ease;
+  margin-left: 250px;
+  min-height: 100vh;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* When sidebar is collapsed */
+@media (min-width: 769px) {
+  .main-content[style*="margin-left: 85px"] {
+    margin-left: 85px !important;
+  }
+}
+
+/* ===== DASHBOARD CONTENT ===== */
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ===== DASHBOARD HEADER (Combined) ===== */
+.dashboard-header.combined {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+  border-bottom: 2px solid var(--muji-red);
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.welcome-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--muji-red);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.welcome-subtitle {
+  font-size: 1rem;
+  color: var(--muji-dark);
+  opacity: 0.85;
+}
+
+.datetime-display {
+  font-size: 0.95rem;
+  color: var(--muji-dark);
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ===== FEATURE GRID ===== */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.feature-card {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card h3 {
+  color: var(--muji-red);
+  margin-bottom: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.feature-card p {
+  color: var(--muji-dark);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* ===== SUMMARY CARDS ===== */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.summary-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-4px);
+}
+
+.card-title {
+  font-weight: 600;
+  color: var(--muji-brown);
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.card-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.card-value.blue { color: #1565c0; }
+.card-value.red { color: #d32f2f; }
+
+/* ===== QUICK ACTIONS TAB PANE ===== */
+.quick-actions {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.tab-header {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.tab-header::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tab-header::-webkit-scrollbar-thumb {
+  background-color: var(--muji-grey);
+  border-radius: 2px;
+}
+
+.tab-header button {
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muji-dark);
+  transition: all 0.2s ease;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tab-header button.active-tab {
+  border-bottom: 3px solid var(--muji-red);
+  color: var(--muji-red);
+}
+
+.tab-header button:hover {
+  color: var(--muji-red);
+}
+
+.tab-content {
+  min-height: 80px;
+  padding: 8px;
+  color: var(--muji-dark);
+}
+
+/* ===== MODAL STYLES ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal-content h2 {
+  color: var(--muji-red);
+  margin-bottom: 16px;
+  font-size: 1.5rem;
+}
+
+.modal-content p {
+  color: var(--muji-dark);
+  margin-bottom: 24px;
+  font-size: 1rem;
+}
+
+.modal-content button {
+  background-color: var(--muji-red);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.modal-content button:hover {
+  background-color: #5a1820;
+}
+
+/* ===== TABLET RESPONSIVE (768px - 1024px) ===== */
+@media (max-width: 1024px) {
+  .features-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  
+  .dashboard-container {
+    padding: 16px;
+  }
+
+  .welcome-title {
+    font-size: 1.6rem;
+  }
+
+  .summary-cards {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .summary-card {
+    padding: 20px 16px;
+  }
+
+  .card-value {
+    font-size: 1.6rem;
+  }
+}
+
+/* ===== MOBILE RESPONSIVE (Max 768px) ===== */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0 !important;
+    padding: 12px;
+  }
+
+  /* Header adjustments */
+  .dashboard-header.combined {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+
+  .header-left {
+    width: 100%;
+  }
+
+  .welcome-title {
+    font-size: 1.4rem;
+    white-space: normal;
+  }
+
+  .datetime-display {
+    font-size: 0.85rem;
+    text-align: left;
+    align-self: flex-start;
+  }
+
+  /* Summary cards - 2 columns on mobile */
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .summary-card {
+    padding: 16px 12px;
+  }
+
+  .card-title {
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+  }
+
+  .card-value {
+    font-size: 1.4rem;
+  }
+
+  /* Quick actions tabs */
+  .quick-actions {
+    padding: 12px;
+  }
+
+  .tab-header {
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .tab-header button {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+
+  .tab-content {
+    padding: 12px 8px;
+    font-size: 0.9rem;
+  }
+
+  /* Features grid */
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .feature-card {
+    padding: 20px;
+  }
+
+  .feature-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .feature-card p {
+    font-size: 0.9rem;
+  }
+
+  .dashboard-container {
+    padding: 0;
+  }
+
+  /* Modal adjustments */
+  .modal-content {
+    padding: 24px;
+    margin: 16px;
+  }
+
+  .modal-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .modal-content p {
+    font-size: 0.95rem;
+  }
+}
+
+/* ===== EXTRA SMALL MOBILE (Max 480px) ===== */
+@media (max-width: 480px) {
+  .main-content {
+    padding: 8px;
+  }
+
+  .dashboard-header.combined {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .welcome-title {
+    font-size: 1.2rem;
+  }
+
+  .datetime-display {
+    font-size: 0.75rem;
+  }
+
+  .summary-cards {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .summary-card {
+    padding: 14px 10px;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+  }
+
+  .card-value {
+    font-size: 1.2rem;
+  }
+
+  .tab-header button {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .quick-actions {
+    padding: 10px;
+  }
+
+  .modal-content {
+    padding: 20px;
+  }
+}
+
+/* ===== LANDSCAPE MOBILE ===== */
+@media (max-width: 896px) and (orientation: landscape) {
+  .dashboard-header.combined {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .datetime-display {
+    text-align: right;
+  }
+
+  .summary-cards {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

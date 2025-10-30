@@ -1,7 +1,7 @@
-import React, { useEffect, useState,useRef } from "react"; // useRef
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./User_Home.css";
-import usePageMeta from '../../../../hooks/usePageMeta';
+import usePageMeta from "../../../../hooks/usePageMeta";
 import Sidebar from "../Sidebar/Sidebar";
 
 const MemberDashboard: React.FC = () => {
@@ -10,121 +10,65 @@ const MemberDashboard: React.FC = () => {
 
   const [memberName, setMemberName] = useState<string>("");
 
-  // ✅ Integrated Sidebar Collapse State (from former version)
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
     sessionStorage.getItem("sidebarCollapsed") === "true"
   );
 
+  // Session state
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
-  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // ✅ Disabled inactivity timer ref
+  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  
-  //🚪 Function to handle logout (DISABLED)
+  // 🔧 Configurable durations
+  const SESSION_DURATION_MINUTES = 45; // total session length
+  const WARNING_BEFORE_EXPIRY_MINUTES = 5; // show warning 5 mins before expiry
+
   const handleSessionExpired = () => {
     console.log("🔒 Session expired, logging out...");
-    
     localStorage.removeItem("auth_token");
     sessionStorage.clear();
-    
+    setShowSessionWarning(false);
     setShowSessionExpiredModal(true);
-    
+
     setTimeout(() => {
       navigate("/login", { replace: true });
     }, 2000);
   };
-  
 
-  // ✅ Function to check if token is expired (still active but no logout call)
-  const isTokenExpired = (token: string): boolean => {
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) return true;
-
-      const payload = JSON.parse(atob(parts[1]));
-      const expirationTime = payload.exp * 1000;
-      const currentTime = Date.now();
-
-      return currentTime > expirationTime;
-    } catch (error) {
-      console.error("Error checking token expiration:", error);
-      return true;
-    }
-  };
-
-  
-  // 💤 Function to reset inactivity timer (DISABLED)
   const resetInactivityTimer = () => {
-    if (sessionTimeoutRef.current) {
-      clearTimeout(sessionTimeoutRef.current);
-    }
+    // Clear existing timers
+    if (sessionTimeoutRef.current) clearTimeout(sessionTimeoutRef.current);
+    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
 
-    const timer = setTimeout(() => {
-      console.log("⏱️ Inactivity timeout reached");
+    // Warning timer
+    warningTimeoutRef.current = setTimeout(() => {
+      console.log("⚠️ Session will expire soon");
+      setShowSessionWarning(true);
+    }, (SESSION_DURATION_MINUTES - WARNING_BEFORE_EXPIRY_MINUTES) * 60 * 1000);
+
+    // Expiration timer
+    sessionTimeoutRef.current = setTimeout(() => {
       handleSessionExpired();
-    }, 30 * 1000); // 30 seconds
-
-    sessionTimeoutRef.current = timer;
+    }, SESSION_DURATION_MINUTES * 60 * 1000);
   };
-  
 
-  // ✅ Setup user verification - ONLY on mount
   useEffect(() => {
     const userType = sessionStorage.getItem("user_type");
-    if (userType !== "member") {
-      console.log("❌ Not a member, redirecting to login");
-      // navigate("/login", { replace: true }); // 🚫 Disabled auto-redirect
-      return;
-    }
+    if (userType !== "member") return;
 
-    const name = sessionStorage.getItem("user_name") || "Member";
-    setMemberName(name);
+    setMemberName(sessionStorage.getItem("user_name") || "Member");
 
-    console.log("✅ Member dashboard loaded");
-
-    // 💤 Disabled inactivity timer setup
-    
     resetInactivityTimer();
 
     const events = ["mousedown", "keydown", "scroll", "touchstart", "click", "mousemove"];
-    events.forEach(event => {
-      document.addEventListener(event, resetInactivityTimer, true);
-    });
+    events.forEach((event) => document.addEventListener(event, resetInactivityTimer, true));
 
     return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, resetInactivityTimer, true);
-      });
-      if (sessionTimeoutRef.current) {
-        clearTimeout(sessionTimeoutRef.current);
-      }
+      events.forEach((event) => document.removeEventListener(event, resetInactivityTimer, true));
+      if (sessionTimeoutRef.current) clearTimeout(sessionTimeoutRef.current);
+      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
     };
-    
-  }, [navigate]);
-
-  // ✅ Token expiration check (no longer logs out or redirects)
-  useEffect(() => {
-    const checkTokenExpiration = () => {
-      const token = localStorage.getItem("auth_token");
-
-      if (!token) {
-        console.log("❌ No token found (auto-logout disabled)");
-        // handleSessionExpired(); // 🚫 Disabled
-        return;
-      }
-
-      if (isTokenExpired(token)) {
-        console.log("⚠️ Token has expired (auto-logout disabled)");
-        // handleSessionExpired(); // 🚫 Disabled
-        return;
-      }
-
-      console.log("✅ Token is still valid");
-    };
-
-    checkTokenExpiration();
-    const tokenCheckInterval = setInterval(checkTokenExpiration, 1 * 60 * 1000);
-
-    return () => clearInterval(tokenCheckInterval);
   }, []);
 
   const getGreeting = () => {
@@ -136,36 +80,77 @@ const MemberDashboard: React.FC = () => {
 
   return (
     <div className="page-layout">
-      {/* 🚫 Disabled Session Expired Modal */}
-      
+      {/* ⚠️ Session Warning Modal */}
+      {showSessionWarning && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              padding: "30px",
+              borderRadius: "8px",
+              textAlign: "center",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+            }}
+          >
+            <h2>Session Expiring Soon</h2>
+            <p>Your session will expire in {WARNING_BEFORE_EXPIRY_MINUTES} minutes.</p>
+            <button
+              onClick={() => {
+                setShowSessionWarning(false);
+                resetInactivityTimer();
+              }}
+              style={{ marginTop: "15px", padding: "8px 16px" }}
+            >
+              Stay Logged In
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🔒 Session Expired Modal */}
       {showSessionExpiredModal && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999
-        }}>
-          <div style={{
-            background: "white",
-            padding: "30px",
-            borderRadius: "8px",
-            textAlign: "center",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-          }}>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              padding: "30px",
+              borderRadius: "8px",
+              textAlign: "center",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+            }}
+          >
             <h2>Session Expired</h2>
             <p>Your session has expired. Redirecting to login...</p>
           </div>
         </div>
       )}
-     
 
-      {/* ✅ Integrated Sidebar with Collapse Persistence */}
       <Sidebar
         onCollapse={(state: boolean) => {
           setSidebarCollapsed(state);
@@ -174,7 +159,6 @@ const MemberDashboard: React.FC = () => {
         }}
       />
 
-      {/* ✅ Responsive main content margin */}
       <main
         className="main-content"
         style={{
@@ -191,21 +175,6 @@ const MemberDashboard: React.FC = () => {
               Welcome to your library dashboard. Explore resources, check your reservations,
               and stay updated with library news.
             </p>
-          </div>
-
-          <div className="features-grid">
-            <div className="feature-card">
-              <h3>My Books</h3>
-              <p>View borrowed books and due dates.</p>
-            </div>
-            <div className="feature-card">
-              <h3>Reservations</h3>
-              <p>Check and manage your reservations.</p>
-            </div>
-            <div className="feature-card">
-              <h3>Library News</h3>
-              <p>Stay updated with announcements and events.</p>
-            </div>
           </div>
         </div>
       </main>
