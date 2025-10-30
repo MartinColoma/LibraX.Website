@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import "./Register.css"; // optional, you can reuse the same styling as before
+import "./Register.css";
 
 const Register: React.FC = () => {
   const [form, setForm] = useState({
@@ -20,10 +20,12 @@ const Register: React.FC = () => {
   const [nfcReading, setNfcReading] = useState(false);
   const [nfcMessage, setNfcMessage] = useState("");
   const [usbNFCMode, setUsbNFCMode] = useState(false);
+
   const nfcAbortControllerRef = useRef<AbortController | null>(null);
   const nfcInputRef = useRef<HTMLInputElement>(null);
   const ndefReaderRef = useRef<any>(null);
 
+  // Detect NFC support on mount
   useEffect(() => {
     const checkNFCSupport = async () => {
       if ("NDEFReader" in window) {
@@ -32,90 +34,86 @@ const Register: React.FC = () => {
             name: "nfc" as any,
           });
           setNfcSupported(permission.state !== "denied");
-          console.log("✅ Native NFC (Web NFC API) is supported");
+          console.log("✅ Native NFC supported");
           setUsbNFCMode(false);
         } catch {
-          console.log("⚠️ Native NFC not supported, switching to USB NFC mode");
+          console.log("⚠️ Native NFC not supported — switching to USB mode");
           setNfcSupported(false);
           setUsbNFCMode(true);
         }
       } else {
-        console.log("❌ Native NFC not supported, enabling USB NFC mode");
+        console.log("❌ No Web NFC support — using USB NFC reader");
         setUsbNFCMode(true);
       }
     };
+
     checkNFCSupport();
   }, []);
 
+  // Handle USB NFC keyboard-based readers
   const handleNFCKeyboardInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       const nfcData = (e.target as HTMLInputElement).value.trim();
       if (nfcData) {
         console.log("✅ USB NFC Reader UID:", nfcData);
         setForm((prev) => ({ ...prev, nfcUid: nfcData }));
-        setNfcMessage(`✅ USB NFC Reader: ${nfcData}`);
+        setNfcMessage(`✅ USB NFC Reader detected UID: ${nfcData}`);
         (e.target as HTMLInputElement).value = "";
       }
     }
   };
 
+  // Start NFC Reading
   const startNFCReading = async () => {
     if (!nfcSupported) {
-      alert("Native NFC is not supported. Using USB NFC Reader mode.");
+      alert("Native NFC not supported. Use USB reader instead.");
       return;
     }
+
     setNfcReading(true);
-    setNfcMessage("📱 Waiting for NFC tag... Please hold near device.");
+    setNfcMessage("📱 Waiting for NFC tag... Hold card near device.");
     nfcAbortControllerRef.current = new AbortController();
 
     try {
       const ndef = new (window as any).NDEFReader();
       ndefReaderRef.current = ndef;
-      console.log("🔍 Starting NFC scan...");
+      await ndef.scan({ signal: nfcAbortControllerRef.current.signal });
 
       ndef.onreading = (event: any) => {
-        console.log("📖 NFC tag detected:", event);
-        const { message } = event;
+        console.log("📖 NFC Tag Detected:", event);
+        const { message, serialNumber } = event;
         let nfcData = "";
 
         if (message && message.records) {
           for (const record of message.records) {
             if (record.recordType === "text" || record.recordType === "uri") {
-              try {
-                const decoder = new TextDecoder();
-                nfcData = decoder.decode(record.data);
-                break;
-              } catch (e) {
-                console.error("Error decoding record:", e);
-              }
+              const decoder = new TextDecoder();
+              nfcData = decoder.decode(record.data);
+              break;
             }
           }
         }
 
-        if (!nfcData && event.serialNumber) {
-          nfcData = event.serialNumber;
-        }
+        if (!nfcData && serialNumber) nfcData = serialNumber;
 
         if (nfcData) {
           setForm((prev) => ({ ...prev, nfcUid: nfcData }));
-          setNfcMessage(`✅ NFC tag read successfully: ${nfcData}`);
+          setNfcMessage(`✅ NFC tag read: ${nfcData}`);
           stopNFCReading();
         } else {
-          setNfcMessage("⚠️ NFC tag read but no data found.");
+          setNfcMessage("⚠️ NFC tag detected but no data found.");
         }
       };
 
-      ndef.onreadingerror = (error: any) => {
-        console.error("❌ NFC reading error:", error);
-        setNfcMessage("❌ Error reading NFC tag.");
+      ndef.onreadingerror = () => {
+        setNfcMessage("❌ Error reading NFC tag. Try again.");
       };
 
-      await ndef.scan({ signal: nfcAbortControllerRef.current.signal });
-      console.log("✅ NFC scan started successfully");
+      console.log("✅ NFC scan started.");
     } catch (error: any) {
       console.error("NFC error:", error);
       if (error.name === "AbortError") {
-        setNfcMessage("⏹️ NFC reading cancelled");
+        setNfcMessage("⏹️ NFC reading cancelled.");
       } else if (error.name === "NotAllowedError") {
         setNfcMessage("❌ NFC permission denied.");
       } else {
@@ -126,12 +124,11 @@ const Register: React.FC = () => {
   };
 
   const stopNFCReading = () => {
-    if (nfcAbortControllerRef.current) {
-      nfcAbortControllerRef.current.abort();
-    }
+    if (nfcAbortControllerRef.current) nfcAbortControllerRef.current.abort();
     setNfcReading(false);
   };
 
+  // Form handlers
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -147,7 +144,6 @@ const Register: React.FC = () => {
       });
 
       const data = await res.json();
-
       if (res.ok) {
         alert(data.message);
         setForm({
@@ -162,11 +158,12 @@ const Register: React.FC = () => {
           email: "",
           nfcUid: "",
         });
+        setNfcMessage("");
       } else {
-        alert(data.message || "Failed to register user");
+        alert(data.message || "Registration failed");
       }
-    } catch (error) {
-      alert("Failed to register user");
+    } catch {
+      alert("Failed to register user.");
     } finally {
       setLoading(false);
     }
@@ -176,11 +173,12 @@ const Register: React.FC = () => {
     <div className="register-form-container">
       <h2>Register New Member</h2>
       <form className="register-form" onSubmit={handleSubmit}>
+        {/* Role Selection */}
         <div className="form-row">
           <label>
-            Membership Type (Role):
+            Membership Type:
             <select name="role" value={form.role} onChange={handleChange} required>
-              <option value="">Select Membership Type</option>
+              <option value="">Select</option>
               <option value="Student">Student</option>
               <option value="Faculty">Faculty</option>
               <option value="Librarian">Librarian</option>
@@ -188,14 +186,24 @@ const Register: React.FC = () => {
           </label>
         </div>
 
+        {/* Basic Info */}
         <div className="form-row">
           <label>
             First Name:
-            <input type="text" name="firstName" value={form.firstName} onChange={handleChange} required />
+            <input type="text" 
+            name="firstName" 
+            value={form.firstName} 
+            onChange={handleChange} required 
+            placeholder="Enter first name"/>
           </label>
           <label>
             Last Name:
-            <input type="text" name="lastName" value={form.lastName} onChange={handleChange} required />
+            <input type="text" 
+            name="lastName" 
+            value={form.lastName} 
+            onChange={handleChange} required 
+            placeholder="Enter last name"/>
+
           </label>
         </div>
 
@@ -203,7 +211,7 @@ const Register: React.FC = () => {
           <label>
             Gender:
             <select name="gender" value={form.gender} onChange={handleChange} required>
-              <option value="">Select gender</option>
+              <option value="">Select</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
             </select>
@@ -217,45 +225,68 @@ const Register: React.FC = () => {
         <div className="form-row">
           <label>
             Address:
-            <input type="text" name="address" value={form.address} onChange={handleChange} />
+            <input type="text" 
+            name="address" 
+            value={form.address} 
+            onChange={handleChange} 
+            placeholder="Enter address"/>
           </label>
           <label>
-            Phone Number:
-            <input type="text" name="phone" value={form.phone} onChange={handleChange} />
+            Phone:
+            <input type="text" 
+            name="phone" value={form.phone} 
+            onChange={handleChange} 
+            placeholder="Enter phone number"/>
           </label>
         </div>
 
         <div className="form-row">
           <label>
-            Email Address:
-            <input type="email" name="email" value={form.email} onChange={handleChange} required />
+            Email:
+            <input type="email" 
+            name="email" 
+            value={form.email} 
+            onChange={handleChange} required 
+            placeholder="Enter email address"/>
           </label>
           <label>
-            Student/Faculty ID:
-            <input type="text" name="idNumber" value={form.idNumber} onChange={handleChange} required />
+            ID Number:
+            <input type="text" 
+            name="idNumber" 
+            value={form.idNumber} 
+            onChange={handleChange} required 
+            placeholder="Enter student/faculty id number"/>
           </label>
         </div>
 
+        {/* NFC Section */}
         <div className="nfc-section">
           <h3>{nfcSupported ? "📱 Native NFC" : "🖥️ USB NFC Reader"}</h3>
+
           <label>
-            NFC Card UID (Optional):
+            NFC UID:
             <input
               ref={nfcInputRef}
               name="nfcUid"
               type="text"
-              placeholder={usbNFCMode ? "Hold USB reader near card" : "Will be filled automatically"}
               value={form.nfcUid}
-              onChange={handleChange}
+              readOnly
               onKeyDown={usbNFCMode ? handleNFCKeyboardInput : undefined}
-              readOnly={!usbNFCMode}
+              placeholder={
+                usbNFCMode
+                  ? "Hold USB reader near card"
+                  : "Click 'Start NFC Reading' to scan"
+              }
+              className="nfc-input"
               style={{
                 backgroundColor: form.nfcUid ? "#e8f5e9" : "#f5f5f5",
                 borderColor: form.nfcUid ? "green" : "#ccc",
+                cursor: "not-allowed",
               }}
             />
           </label>
 
+          {/* Start/Stop NFC Button */}
           {nfcSupported && (
             <button
               type="button"
@@ -266,9 +297,14 @@ const Register: React.FC = () => {
             </button>
           )}
 
+          {usbNFCMode && !nfcSupported && (
+            <p className="nfc-message">💡 USB Reader: Hold card near device to scan</p>
+          )}
+
           {nfcMessage && <p className="nfc-message">{nfcMessage}</p>}
         </div>
 
+        {/* Submit */}
         <div className="form-actions">
           <button type="submit" disabled={loading}>
             {loading ? "Registering..." : "Create Account"}

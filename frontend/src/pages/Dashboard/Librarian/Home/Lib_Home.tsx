@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./Lib_Home.css";
 import usePageMeta from "../../../../hooks/usePageMeta";
 import Sidebar from "../Sidebar/Lib_Sidebar";
+import Overview from "./QuickActions/Overview/Overview";
 import Register from "./QuickActions/Register/Register";
 
 const LibrarianDashboard: React.FC = () => {
@@ -23,7 +24,7 @@ const LibrarianDashboard: React.FC = () => {
   const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const SESSION_DURATION_MINUTES = 120;
+  const SESSION_DURATION_MINUTES = 600;
   const WARNING_BEFORE_EXPIRY_MINUTES = 5;
 
   const handleSessionExpired = () => {
@@ -201,15 +202,16 @@ const LibrarianDashboard: React.FC = () => {
             ))}
           </div>
 
-          <div className="tab-content">
-            {activeQuickAction === "registerMember" ? (
-              <Register />
-            ) : (
-              <p>
-                Content for <strong>{activeQuickAction}</strong> goes here.
-              </p>
-            )}
-          </div>
+<div className="tab-content">
+  {activeQuickAction === "overview" ? (
+    <Overview />
+  ) : activeQuickAction === "registerMember" ? (
+    <Register />
+  ) : (
+    <p>Content for <strong>{activeQuickAction}</strong> goes here.</p>
+  )}
+</div>
+
         </div>
 
       </main>

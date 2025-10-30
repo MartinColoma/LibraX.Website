@@ -8,6 +8,9 @@ LibraX
 │   ├── package.json
 │   └── routes
 │       ├── auth.js
+│       ├── librarian
+│       │   └── home_overview
+│       │       └── overview.js
 │       ├── registration.js
 │       └── verify-token.js
 ├── frontend
@@ -57,8 +60,10 @@ LibraX
 │   │   │   │   │   │       ├── AddNewBooks
 │   │   │   │   │   │       ├── BookRequest
 │   │   │   │   │   │       ├── Overview
+│   │   │   │   │   │       │   ├── Overview.css
+│   │   │   │   │   │       │   └── Overview.tsx
 │   │   │   │   │   │       ├── Register
-│   │   │   │   │   │       │   ├── Register.module.css
+│   │   │   │   │   │       │   ├── Register.css
 │   │   │   │   │   │       │   └── Register.tsx
 │   │   │   │   │   │       └── ReturnBooks
 │   │   │   │   │   ├── ManageBooks

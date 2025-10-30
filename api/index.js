@@ -4,13 +4,15 @@ const path = require("path");
 
 const app = express();
 
-// Import route modules
+// ===== IMPORT ROUTE MODULES =====
 const authRoutes = require("./routes/auth");
 const registrationRoutes = require("./routes/registration");
 const verifyTokenRoutes = require("./routes/verify-token");
+const librarianOverviewRoutes = require("./routes/librarian/home_overview/overview"); // ✅ NEW IMPORT
 
 // ===== STATIC FILES =====
 app.use(express.static(path.join(__dirname, "..", "dist")));
+
 // ===== MIDDLEWARE =====
 app.use(express.json());
 app.use(
@@ -32,6 +34,7 @@ app.get("/api/health", (req, res) => {
 authRoutes(app);
 registrationRoutes(app);
 verifyTokenRoutes(app);
+librarianOverviewRoutes(app); // ✅ ADDED ROUTE HERE
 
 // ===== SPA CATCH-ALL ROUTE =====
 // This should be placed AFTER all API routes, BEFORE error handling
