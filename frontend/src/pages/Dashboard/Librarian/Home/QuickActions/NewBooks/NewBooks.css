@@ -150,12 +150,8 @@ button {
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* === Status Message === */
@@ -196,6 +192,14 @@ button {
   font-weight: 700;
   color: #4b1d1d;
 }
+
+.preview-section p.nfc-count {
+  font-weight: 600;
+  margin-top: 0.5rem;
+  color: #751b1b;
+}
+
+/* === Author Fields === */
 .author-input-group {
   display: flex;
   align-items: center;
@@ -235,6 +239,8 @@ button {
 .add-author-btn:hover {
   background-color: #c79458;
 }
+
+/* === Combobox Styles === */
 .combobox {
   position: relative;
 }
@@ -274,4 +280,149 @@ button {
 
 .dropdown-list li:hover {
   background: #444;
+}
+
+/* === NFC Section Unified === */
+.nfc-section {
+  margin-top: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  background-color: #fdf9f6;
+  border: 1px solid #e0cfc0;
+  border-radius: 6px;
+}
+
+.nfc-section h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #751b1b;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.nfc-input {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #c9b8a8;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border 0.2s ease-in-out, background 0.2s ease-in-out;
+}
+
+.nfc-input:focus {
+  border-color: #aa6f4c;
+  box-shadow: 0 0 0 1px #aa6f4c3b;
+}
+
+.nfc-btn {
+  background-color: #b1834b;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  width: fit-content;
+  transition: background 0.2s;
+}
+
+.nfc-btn:hover {
+  background-color: #c79458;
+}
+
+.nfc-message {
+  font-size: 0.9rem;
+  color: #751b1b;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+/* List of scanned NFC UIDs */
+.nfc-uid-list {
+  max-height: 140px;
+  overflow-y: auto;
+  padding-left: 0.8rem;
+  margin-top: 0.4rem;
+  border-left: 3px solid #b1834b;
+}
+
+.nfc-uid-list li {
+  background: #f2f2f2;
+  color: #3b0b0b;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+/* Optional modal for NFC scanning (if modal approach is used) */
+.nfc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.nfc-modal-content {
+  background: #fbf6f2;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.nfc-modal-content h3 {
+  color: #751b1b;
+  margin-bottom: 1rem;
+}
+
+.nfc-modal-content input {
+  width: 80%;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #c9b8a8;
+  outline: none;
+}
+
+.nfc-modal-content button {
+  margin: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background-color: #b1834b;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.nfc-modal-content button:hover {
+  background-color: #c79458;
+}
+
+.nfc-modal-content ul {
+  list-style: none;
+  max-height: 120px;
+  overflow-y: auto;
+  margin: 1rem 0;
+  padding: 0;
+}
+
+.nfc-modal-content li {
+  background: #f2f2f2;
+  padding: 0.3rem 0.6rem;
+  margin-bottom: 0.25rem;
+  border-radius: 0.25rem;
+  color: #3b0b0b;
+  font-size: 0.9rem;
 }

@@ -59,7 +59,7 @@ module.exports = (app) => {
   });
 
   // ====================
-  // 🔹 POST New Book
+  // 🔹 POST New Book (NFC-aware)
   // ====================
   router.post("/", async (req, res) => {
     try {
@@ -75,6 +75,7 @@ module.exports = (app) => {
         categoryId,
         authors,
         copies,
+        nfcUids = [],
       } = req.body;
 
       if (!title) {
@@ -86,10 +87,10 @@ module.exports = (app) => {
       // Step 1️⃣: Generate Book ID
       const bookId = generateBookId();
 
-      // Step 2️⃣: Determine copies
+      // Step 2️⃣: Determine total copies
       const totalCopies = copies && copies > 0 ? copies : 1;
 
-      // Step 3️⃣: Insert book with available_copies & total_copies
+      // Step 3️⃣: Insert book
       const { error: bookError } = await supabase.from("books").insert([
         {
           book_id: bookId,
@@ -103,12 +104,12 @@ module.exports = (app) => {
           language,
           category_id: categoryId,
           total_copies: totalCopies,
-          available_copies: totalCopies, // all copies available initially
+          available_copies: totalCopies,
         },
       ]);
       if (bookError) throw bookError;
 
-      // Step 4️⃣: Handle authors (reuse if existing, insert if new)
+      // Step 4️⃣: Handle authors
       const authorIds = [];
       for (const name of authors || []) {
         if (!name.trim()) continue;
@@ -145,14 +146,14 @@ module.exports = (app) => {
         if (mapErr) throw mapErr;
       }
 
-      // Step 6️⃣: Insert book copies (bookId + incremented suffix)
+      // Step 6️⃣: Insert book copies with NFC UIDs
       const copiesToInsert = [];
-      for (let i = 1; i <= totalCopies; i++) {
-        const suffix = String(i).padStart(5, "0"); // 00001, 00002...
+      for (let i = 0; i < totalCopies; i++) {
+        const suffix = String(i + 1).padStart(5, "0"); // 00001, 00002...
         copiesToInsert.push({
           copy_id: `${bookId}${suffix}`,
           book_id: bookId,
-          nfc_uid: null, // for future NFC scanning
+          nfc_uid: nfcUids[i] || null, // assign scanned UID if exists
         });
       }
 

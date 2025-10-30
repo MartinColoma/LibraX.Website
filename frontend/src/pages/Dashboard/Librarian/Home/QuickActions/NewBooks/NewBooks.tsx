@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./NewBooks.css";
 import { Loader2, Upload, Plus, X, ChevronDown } from "lucide-react";
 import usePageMeta from "../../../../../../hooks/usePageMeta";
@@ -30,23 +30,34 @@ const NewBooks: React.FC = () => {
     copies: "",
   });
 
-  // Dynamic authors array
   const [authors, setAuthors] = useState<string[]>([""]);
-    useEffect(() => {
+
+// === NFC STATES ===
+const [nfcSupported, setNfcSupported] = useState(false);
+const [nfcReading, setNfcReading] = useState(false);
+const [nfcMessage, setNfcMessage] = useState("");
+const [scannedUIDs, setScannedUIDs] = useState<string[]>([]); // track unique UIDs
+const nfcAbortControllerRef = useRef<AbortController | null>(null);
+const ndefReaderRef = useRef<any>(null);
+
+
+  // === FETCH AUTHORS ===
+  useEffect(() => {
     const fetchAuthors = async () => {
-        try {
+      try {
         const res = await fetch(
-            "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/authors"
+          "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/authors"
         );
         const data = await res.json();
         setAllAuthors(data.authors || []);
-        } catch (err) {
+      } catch (err) {
         console.error("❌ Failed to fetch authors:", err);
-        }
+      }
     };
     fetchAuthors();
-    }, []);
-  // === FETCH CATEGORIES FROM BACKEND ===
+  }, []);
+
+  // === FETCH CATEGORIES ===
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -66,14 +77,84 @@ const NewBooks: React.FC = () => {
   useEffect(() => {
     if (book.categoryType) {
       const filtered = categories.filter(
-        (c) =>
-          c.category_type.toLowerCase() === book.categoryType.toLowerCase()
+        (c) => c.category_type.toLowerCase() === book.categoryType.toLowerCase()
       );
       setFilteredCategories(filtered);
     } else {
       setFilteredCategories([]);
     }
   }, [book.categoryType, categories]);
+
+useEffect(() => {
+  const checkNFCSupport = async () => {
+    if ("NDEFReader" in window) {
+      try {
+        const permission = await navigator.permissions.query({ name: "nfc" as any });
+        setNfcSupported(permission.state !== "denied");
+      } catch {
+        setNfcSupported(false);
+      }
+    } else {
+      setNfcSupported(false);
+    }
+  };
+  checkNFCSupport();
+}, []);
+
+
+  // === NFC HANDLERS ===
+  const startNFCReading = async () => {
+    if (!nfcSupported) {
+      alert("Native NFC not supported. Use USB reader instead.");
+      return;
+    }
+
+    setNfcReading(true);
+    setNfcMessage("📱 Waiting for NFC tag... Hold card near device.");
+    nfcAbortControllerRef.current = new AbortController();
+
+    try {
+      const ndef = new (window as any).NDEFReader();
+      ndefReaderRef.current = ndef;
+      await ndef.scan({ signal: nfcAbortControllerRef.current.signal });
+
+      ndef.onreading = (event: any) => {
+        let uid = event.serialNumber || "";
+        if (!uid && event.message && event.message.records) {
+          for (const record of event.message.records) {
+            if (record.recordType === "text" || record.recordType === "uri") {
+              uid = new TextDecoder().decode(record.data);
+              break;
+            }
+          }
+        }
+
+        if (uid) {
+          if (!scannedUIDs.includes(uid)) {
+            setScannedUIDs((prev) => [...prev, uid]);
+            setNfcMessage(`✅ NFC tag added: ${uid}`);
+          } else {
+            setNfcMessage(`⚠️ Duplicate NFC UID: ${uid}`);
+          }
+        } else {
+          setNfcMessage("⚠️ NFC tag detected but no UID found.");
+        }
+      };
+
+      ndef.onreadingerror = () => {
+        setNfcMessage("❌ Error reading NFC tag.");
+      };
+    } catch (error: any) {
+      console.error("NFC error:", error);
+      setNfcMessage(`❌ NFC Error: ${error.message}`);
+      setNfcReading(false);
+    }
+  };
+
+  const stopNFCReading = () => {
+    if (nfcAbortControllerRef.current) nfcAbortControllerRef.current.abort();
+    setNfcReading(false);
+  };
 
   // === FORM HANDLERS ===
   const handleChange = (
@@ -111,18 +192,18 @@ const NewBooks: React.FC = () => {
     setAuthors([""]);
     setMessage(null);
     setStep(1);
+    setScannedUIDs([]);
+    setNfcMessage("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 🚫 Only allow submission at final step
     if (step < 3) return;
 
     setLoading(true);
     setMessage(null);
 
     try {
-      // Convert date to just year (int)
       const pubYear = book.publicationYear
         ? parseInt(book.publicationYear.split("-")[0])
         : null;
@@ -143,7 +224,8 @@ const NewBooks: React.FC = () => {
             language: book.language.trim(),
             categoryId: parseInt(book.category) || null,
             authors: authors.filter((a) => a.trim() !== ""),
-            copies: parseInt(book.copies) || 1,
+            copies: scannedUIDs.length || parseInt(book.copies) || 1,
+            nfcUids: scannedUIDs,
           }),
         }
       );
@@ -160,8 +242,12 @@ const NewBooks: React.FC = () => {
       setLoading(false);
     }
   };
+const allCopiesScanned =
+  book.copies && !isNaN(Number(book.copies))
+    ? scannedUIDs.length >= Number(book.copies)
+    : scannedUIDs.length > 0; // fallback if copies not set
 
-  // === RENDER FORM STEPS ===
+  // === RENDER STEPS ===
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -173,7 +259,6 @@ const NewBooks: React.FC = () => {
                 MARC Upload <Upload size={16} />
               </button>
             </div>
-
             <label>Book Title:</label>
             <input
               name="title"
@@ -182,7 +267,6 @@ const NewBooks: React.FC = () => {
               placeholder="Enter the full title of the book"
               required
             />
-
             <label>Subtitle:</label>
             <input
               name="subtitle"
@@ -190,7 +274,6 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter the subtitle of the book"
             />
-
             <label>ISBN Number:</label>
             <input
               name="isbn"
@@ -198,7 +281,6 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter ISBN number of the book"
             />
-
             <label>Description (optional):</label>
             <textarea
               name="description"
@@ -213,7 +295,6 @@ const NewBooks: React.FC = () => {
         const uniqueCategoryTypes = Array.from(
           new Set(categories.map((c) => c.category_type))
         );
-
         return (
           <>
             <h2>Add New Book</h2>
@@ -224,7 +305,6 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter publisher names"
             />
-
             <label>Publication Year:</label>
             <input
               type="date"
@@ -232,7 +312,6 @@ const NewBooks: React.FC = () => {
               value={book.publicationYear}
               onChange={handleChange}
             />
-
             <label>Edition:</label>
             <input
               name="edition"
@@ -240,8 +319,6 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter book edition"
             />
-
-            {/* === Category Type Combobox === */}
             <label>Category Type:</label>
             <div className="combobox">
               <input
@@ -274,7 +351,6 @@ const NewBooks: React.FC = () => {
               )}
             </div>
 
-            {/* === Category Combobox === */}
             <label>Category:</label>
             <div className="combobox">
               <input
@@ -316,57 +392,91 @@ const NewBooks: React.FC = () => {
           </>
         );
 
-      case 3:
+        case 3:
         return (
-          <>
+            <>
             <h2>Add New Book</h2>
             <label>Author(s):</label>
             {authors.map((author, index) => (
-            <div key={index} className="author-input-group">
+                <div key={index} className="author-input-group">
                 <div className="combobox">
-                <input
+                    <input
                     value={author}
                     onChange={(e) => handleAuthorChange(index, e.target.value)}
                     placeholder={`Author ${index + 1}`}
                     list={`author-suggestions-${index}`}
-                />
-                <datalist id={`author-suggestions-${index}`}>
+                    />
+                    <datalist id={`author-suggestions-${index}`}>
                     {allAuthors
-                    .filter((a) =>
+                        .filter((a) =>
                         a.name.toLowerCase().includes(author.toLowerCase())
-                    )
-                    .map((a) => (
+                        )
+                        .map((a) => (
                         <option key={a.author_id} value={a.name} />
-                    ))}
-                </datalist>
+                        ))}
+                    </datalist>
                 </div>
-
                 {authors.length > 1 && (
-                <button
+                    <button
                     type="button"
                     className="remove-author-btn"
                     onClick={() => removeAuthorField(index)}
-                >
+                    >
                     <X size={16} />
-                </button>
+                    </button>
                 )}
-            </div>
+                </div>
             ))}
             <button type="button" className="add-author-btn" onClick={addAuthorField}>
-            <Plus size={16} /> Add Another Author
+                <Plus size={16} /> Add Another Author
             </button>
-
 
             <label>Quantity Available:</label>
             <input
-              type="number"
-              name="copies"
-              value={book.copies}
-              onChange={handleChange}
-              placeholder="Enter the total number of copies"
+                type="number"
+                name="copies"
+                value={book.copies}
+                onChange={handleChange}
+                placeholder="Enter total number of copies"
             />
-          </>
+            </>
         );
+        case 4:
+        return (
+            <>
+            <h2>Scan NFC Tags</h2>
+            <p>
+                Total Copies to Scan: {book.copies || "N/A"}
+            </p>
+            <div className="nfc-section">
+                <h3>📱 NFC Scanner</h3>
+
+                {nfcSupported ? (
+                <button
+                    type="button"
+                    onClick={nfcReading ? stopNFCReading : startNFCReading}
+                    className="nfc-btn"
+                >
+                    {nfcReading ? "🛑 Stop NFC Reading" : "📱 Start NFC Reading"}
+                </button>
+                ) : (
+                <p>NFC not supported on this device.</p>
+                )}
+
+                <p className="nfc-message">
+                Scanned Copies: {scannedUIDs.length} / {book.copies || "N/A"}
+                </p>
+                {nfcMessage && <p className="nfc-message">{nfcMessage}</p>}
+
+                <ul className="nfc-uid-list">
+                {scannedUIDs.map((uid, i) => (
+                    <li key={i}>{uid}</li>
+                ))}
+                </ul>
+            </div>
+            </>
+        );
+
     }
   };
 
@@ -382,39 +492,44 @@ const NewBooks: React.FC = () => {
         {renderStep()}
 
         <div className="form-buttons">
-          <button type="button" className="clear-btn" onClick={clearAll}>
-            Clear All Fields
-          </button>
-
-          {step > 1 && (
+        {step > 1 && (
             <button
-              type="button"
-              className="back-btn"
-              onClick={(e) => {
+                type="button"
+                className="back-btn"
+                onClick={(e) => {
                 e.preventDefault();
                 setStep(step - 1);
-              }}
+                }}
             >
-              Back
+                Back
             </button>
-          )}
+            )}
 
-          {step < 3 ? (
-            <button
-              type="button"
-              className="next-btn"
-              onClick={(e) => {
-                e.preventDefault();
-                setStep(step + 1);
-              }}
-            >
-              Next
-            </button>
-          ) : (
-            <button type="submit" className="add-btn" disabled={loading}>
-              {loading ? <Loader2 className="spin" size={20} /> : "Add Book"}
-            </button>
-          )}
+            {step < 4 ? (
+                <button
+                    type="button"
+                    className="next-btn"
+                    onClick={(e) => {
+                    e.preventDefault();
+                    setStep(step + 1);
+                    }}
+                >
+                    Next
+                </button>
+                ) : (
+                <button
+                    type="submit"
+                    className="add-btn"
+                    disabled={loading || !allCopiesScanned} // 🔹 disable until all scanned
+                >
+                    {loading ? (
+                    <Loader2 className="spin" size={20} />
+                    ) : (
+                    "Add Book"
+                    )}
+                </button>
+            )}
+
         </div>
 
         {message && <p className="status-msg">{message}</p>}
@@ -424,8 +539,7 @@ const NewBooks: React.FC = () => {
       <div className="preview-section">
         <h2>New Book Preview</h2>
         <p>
-          <strong>Book Title:</strong>{" "}
-          {book.title || "[The Title of the Book]"}
+          <strong>Book Title:</strong> {book.title || "[The Title of the Book]"}
         </p>
         <p>
           <strong>Subtitle:</strong> {book.subtitle || "[Subtitle of the book]"}
@@ -441,8 +555,7 @@ const NewBooks: React.FC = () => {
           <strong>Publisher:</strong> {book.publisher || "[Publisher names]"}
         </p>
         <p>
-          <strong>Publication Year:</strong>{" "}
-          {book.publicationYear || "[YYYY-MM-DD]"}
+          <strong>Publication Year:</strong> {book.publicationYear || "[YYYY-MM-DD]"}
         </p>
         <p>
           <strong>Edition:</strong> {book.edition || "[Edition]"}
@@ -451,18 +564,16 @@ const NewBooks: React.FC = () => {
           <strong>Category:</strong> {book.category || "[Category]"}
         </p>
         <p>
-          <strong>Category Type:</strong>{" "}
-          {book.categoryType || "[Category Type]"}
+          <strong>Category Type:</strong> {book.categoryType || "[Category Type]"}
         </p>
         <p>
           <strong>Language:</strong> {book.language || "[Language]"}
         </p>
         <p>
-          <strong>Quantity Available:</strong> {book.copies || "0"}
+          <strong>Quantity Available:</strong> {scannedUIDs.length || book.copies || "0"}
         </p>
         <p>
-          <strong>Description:</strong>{" "}
-          {book.description || "[Description of the book]"}{" "}
+          <strong>Description:</strong> {book.description || "[Description of the book]"}
         </p>
       </div>
     </div>
