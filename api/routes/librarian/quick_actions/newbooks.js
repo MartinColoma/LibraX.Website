@@ -10,7 +10,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error("❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY!");
-  process.exit(1); // fail fast
+  process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -21,14 +21,10 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const generateIntId = () =>
   parseInt(uuidv4().replace(/-/g, "").slice(0, 8), 16) % 2_000_000_000;
 
-const generateCharId = () => uuidv4().replace(/-/g, "").slice(0, 11);
+const generateBookId = () => uuidv4().replace(/-/g, "").slice(0, 11);
 
 module.exports = (app) => {
   const router = express.Router();
-
-  // ====================
-  // 🔹 Middleware for JSON size
-  // ====================
   router.use(express.json({ limit: "5mb" }));
 
   // ====================
@@ -85,28 +81,29 @@ module.exports = (app) => {
         return res.status(400).json({ message: "Title and ISBN required" });
       }
 
-      console.log("Adding new book:", isbn, title);
+      console.log("📘 Adding new book:", title);
 
-      // Insert book with upsert to prevent conflicts
-      const { error: bookError } = await supabase
-        .from("books")
-        .upsert([
-          {
-            book_id: isbn,
-            isbn,
-            title,
-            subtitle,
-            description,
-            publisher,
-            publication_year: publicationYear,
-            edition,
-            language,
-            category_id: categoryId,
-          },
-        ]);
+      // Step 1️⃣: Generate Book ID
+      const bookId = generateBookId();
+
+      // Step 2️⃣: Insert book
+      const { error: bookError } = await supabase.from("books").insert([
+        {
+          book_id: bookId,
+          isbn,
+          title,
+          subtitle,
+          description,
+          publisher,
+          publication_year: publicationYear,
+          edition,
+          language,
+          category_id: categoryId,
+        },
+      ]);
       if (bookError) throw bookError;
 
-      // Handle authors
+      // Step 3️⃣: Handle authors (reuse if existing, insert if new)
       const authorIds = [];
       for (const name of authors || []) {
         if (!name.trim()) continue;
@@ -135,19 +132,26 @@ module.exports = (app) => {
         authorIds.push(authorId);
       }
 
-      // Map book_authors
+      // Step 4️⃣: Link authors to book
       for (const id of authorIds) {
         const { error: mapErr } = await supabase
           .from("book_authors")
-          .upsert([{ book_id: isbn, author_id: id }]);
+          .upsert([{ book_id: bookId, author_id: id }]);
         if (mapErr) throw mapErr;
       }
 
-      // Insert copies
+      // Step 5️⃣: Insert book copies (auto-increment style IDs)
+      const totalCopies = copies && copies > 0 ? copies : 1;
       const copiesToInsert = [];
-      for (let i = 0; i < (copies || 1); i++) {
-        const copyId = generateCharId();
-        copiesToInsert.push({ copy_id: copyId, book_id: isbn, nfc_uid: copyId });
+
+      for (let i = 1; i <= totalCopies; i++) {
+        const suffix = String(i).padStart(5, "0"); // e.g., 00001
+        const copyId = `${bookId}${suffix}`;
+        copiesToInsert.push({
+          copy_id: copyId,
+          book_id: bookId,
+          nfc_uid: null, // will be populated later via NFC scan
+        });
       }
 
       const { error: copyError } = await supabase
@@ -155,7 +159,11 @@ module.exports = (app) => {
         .insert(copiesToInsert);
       if (copyError) throw copyError;
 
-      res.status(200).json({ message: "✅ Book successfully added!" });
+      res.status(200).json({
+        message: "✅ Book successfully added!",
+        bookId,
+        copiesAdded: copiesToInsert.length,
+      });
     } catch (err) {
       console.error("❌ Error adding book:", err);
       res.status(500).json({ message: err.message || "Internal server error" });
