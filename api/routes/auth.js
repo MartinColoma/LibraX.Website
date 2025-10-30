@@ -80,9 +80,12 @@ const authRoutes = (app) => {
 
       const user = users[0];
 
-      // Check if account is active
-      if (user.status !== 'active') {
-        return res.status(403).json({ error: 'Account is not active. Please contact admin.' });
+      // Check if account is active (if status field exists)
+      if (user.status && user.status !== 'active') {
+        console.log(`⚠️ Account status check failed for ${email}: status = ${user.status}`);
+        return res.status(403).json({ 
+          error: `Account is ${user.status}. Please contact admin.` 
+        });
       }
 
       // Validate password hash
