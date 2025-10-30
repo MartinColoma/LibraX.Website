@@ -26,20 +26,30 @@ const Overview: React.FC = () => {
 
   useEffect(() => {
     const fetchRecentUsers = async () => {
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/librarian/overview/recent-users`
-        );
-        const json = await res.json();
-        if (json.success) {
-          setUsers(json.data);
+    try {
+      const res = await fetch(
+        "https://librax-backend.onrender.com/api/librarian/overview/recent-users",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            // you can add auth headers here if needed
+            // "Authorization": `Bearer ${token}`
+          },
         }
-      } catch (err) {
-        console.error("Error fetching recent users:", err);
-      } finally {
-        setLoading(false);
+      );
+
+      const json = await res.json();
+      if (json.success) {
+        setUsers(json.data);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching recent users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
     fetchRecentUsers();
   }, []);
 
