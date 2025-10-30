@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../../../db"); // adjust if you use Supabase or pg client
 
 // 🧠 Fetch users summary for overview
 router.get("/api/librarian/overview", async (req, res) => {
