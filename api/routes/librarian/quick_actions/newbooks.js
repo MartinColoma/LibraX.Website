@@ -1,33 +1,38 @@
-// api/routes/librarian/quick_actions/newbooks.js
 const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
 const { v4: uuidv4 } = require("uuid");
 
+// ====================
+// 🔹 Env Validation
+// ====================
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY!");
+  process.exit(1); // fail fast
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ====================
-// 🔹 ID GENERATORS
+// 🔹 ID Generators
 // ====================
+const generateIntId = () =>
+  parseInt(uuidv4().replace(/-/g, "").slice(0, 8), 16) % 2_000_000_000;
 
-// Integer-based IDs (safe for INT)
-function generateIntId() {
-  // 8 hex chars → fits safely into 32-bit signed integer
-  const num = parseInt(uuidv4().replace(/-/g, "").slice(0, 8), 16);
-  return num % 2000000000; // ≤ 2,000,000,000
-}
-
-// Character-varying IDs (11-char unique strings)
-function generateCharId() {
-  return uuidv4().replace(/-/g, "").slice(0, 11);
-}
+const generateCharId = () => uuidv4().replace(/-/g, "").slice(0, 11);
 
 module.exports = (app) => {
   const router = express.Router();
 
   // ====================
-  // 🔹 FETCH CATEGORIES
+  // 🔹 Middleware for JSON size
+  // ====================
+  router.use(express.json({ limit: "5mb" }));
+
+  // ====================
+  // 🔹 GET Categories
   // ====================
   router.get("/categories", async (req, res) => {
     try {
@@ -41,7 +46,7 @@ module.exports = (app) => {
   });
 
   // ====================
-  // 🔹 FETCH AUTHORS
+  // 🔹 GET Authors
   // ====================
   router.get("/authors", async (req, res) => {
     try {
@@ -58,7 +63,7 @@ module.exports = (app) => {
   });
 
   // ====================
-  // 🔹 ADD NEW BOOK
+  // 🔹 POST New Book
   // ====================
   router.post("/", async (req, res) => {
     try {
@@ -76,42 +81,40 @@ module.exports = (app) => {
         copies,
       } = req.body;
 
-      // ✅ Validate input
-      if (!isbn || !title)
-        return res
-          .status(400)
-          .json({ message: "Title and ISBN are required." });
+      if (!isbn || !title) {
+        return res.status(400).json({ message: "Title and ISBN required" });
+      }
 
-      // ====================
-      // 🔸 Insert into books
-      // ====================
-      const { error: bookError } = await supabase.from("books").insert([
-        {
-          book_id: isbn,
-          isbn,
-          title,
-          subtitle,
-          description,
-          publisher,
-          publication_year: publicationYear,
-          edition,
-          language,
-          category_id: categoryId,
-        },
-      ]);
+      console.log("Adding new book:", isbn, title);
+
+      // Insert book with upsert to prevent conflicts
+      const { error: bookError } = await supabase
+        .from("books")
+        .upsert([
+          {
+            book_id: isbn,
+            isbn,
+            title,
+            subtitle,
+            description,
+            publisher,
+            publication_year: publicationYear,
+            edition,
+            language,
+            category_id: categoryId,
+          },
+        ]);
       if (bookError) throw bookError;
 
-      // ====================
-      // 🔸 Handle authors
-      // ====================
+      // Handle authors
       const authorIds = [];
-      for (const authorName of authors || []) {
-        if (!authorName.trim()) continue;
+      for (const name of authors || []) {
+        if (!name.trim()) continue;
 
         const { data: existing, error: checkErr } = await supabase
           .from("authors")
           .select("author_id")
-          .ilike("name", authorName.trim())
+          .ilike("name", name.trim())
           .maybeSingle();
         if (checkErr) throw checkErr;
 
@@ -122,7 +125,7 @@ module.exports = (app) => {
           const newId = generateIntId();
           const { data: inserted, error: insertErr } = await supabase
             .from("authors")
-            .insert([{ author_id: newId, name: authorName.trim() }])
+            .insert([{ author_id: newId, name: name.trim() }])
             .select()
             .single();
           if (insertErr) throw insertErr;
@@ -132,27 +135,19 @@ module.exports = (app) => {
         authorIds.push(authorId);
       }
 
-      // ====================
-      // 🔸 Map book_authors
-      // ====================
+      // Map book_authors
       for (const id of authorIds) {
         const { error: mapErr } = await supabase
           .from("book_authors")
-          .insert([{ book_id: isbn, author_id: id }]);
+          .upsert([{ book_id: isbn, author_id: id }]);
         if (mapErr) throw mapErr;
       }
 
-      // ====================
-      // 🔸 Generate book copies
-      // ====================
+      // Insert copies
       const copiesToInsert = [];
       for (let i = 0; i < (copies || 1); i++) {
         const copyId = generateCharId();
-        copiesToInsert.push({
-          copy_id: copyId,
-          book_id: isbn,
-          nfc_uid: copyId,
-        });
+        copiesToInsert.push({ copy_id: copyId, book_id: isbn, nfc_uid: copyId });
       }
 
       const { error: copyError } = await supabase
@@ -160,18 +155,15 @@ module.exports = (app) => {
         .insert(copiesToInsert);
       if (copyError) throw copyError;
 
-      // ✅ All done
       res.status(200).json({ message: "✅ Book successfully added!" });
     } catch (err) {
       console.error("❌ Error adding book:", err);
-      res
-        .status(500)
-        .json({ message: err.message || "Internal server error" });
+      res.status(500).json({ message: err.message || "Internal server error" });
     }
   });
 
   // ====================
-  // 🔹 Mount Route
+  // 🔹 Mount
   // ====================
   app.use("/api/librarian/quick_actions/newbooks", router);
 };
