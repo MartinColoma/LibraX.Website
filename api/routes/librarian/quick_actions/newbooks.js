@@ -1,6 +1,6 @@
-// api/routes/librarian/quick_actions/newbooks.js
 const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
+const { v4: uuidv4 } = require("uuid");
 require("dotenv").config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -41,7 +41,7 @@ module.exports = (app) => {
         .from("books")
         .insert([
           {
-            book_id: isbn,
+            book_id: isbn, // Still using ISBN as unique book identifier
             title,
             subtitle,
             isbn,
@@ -60,6 +60,7 @@ module.exports = (app) => {
 
       // === 2️⃣ Insert or fetch authors ===
       let authorIds = [];
+
       for (const authorName of authors) {
         if (!authorName.trim()) continue;
 
@@ -93,21 +94,28 @@ module.exports = (app) => {
           book_id: newBook.book_id,
           author_id: id,
         }));
+
         const { error: linkErr } = await supabase
           .from("book_authors")
           .insert(authorLinks);
+
         if (linkErr) throw linkErr;
       }
 
-      // === 4️⃣ Add copies ===
-      const copiesArr = Array.from({ length: copies }, () => ({
-        book_id: newBook.book_id,
-        available: true,
-      }));
+      // === 4️⃣ Add copies (generate short unique IDs) ===
+      const copiesArr = Array.from({ length: copies }, () => {
+        const copyId = uuidv4().replace(/-/g, "").slice(0, 11); // trimmed UUID
+        return {
+          copy_id: copyId, // safe for VARCHAR(11)
+          book_id: newBook.book_id,
+          available: true,
+        };
+      });
 
       const { error: copyErr } = await supabase
         .from("book_copies")
         .insert(copiesArr);
+
       if (copyErr) throw copyErr;
 
       return res.status(201).json({
@@ -141,6 +149,6 @@ module.exports = (app) => {
     }
   });
 
-  // Mount route
+  // Mount route (DO NOT CHANGE)
   app.use("/api/librarian/quick_actions/newbooks", router);
 };

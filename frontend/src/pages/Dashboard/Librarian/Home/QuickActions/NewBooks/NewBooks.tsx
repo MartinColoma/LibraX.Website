@@ -99,45 +99,51 @@ const NewBooks: React.FC = () => {
     setStep(1);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
     try {
-      const res = await fetch(
+        // Convert date to just year (int)
+        const pubYear = book.publicationYear
+        ? parseInt(book.publicationYear.split("-")[0])
+        : null;
+
+        const res = await fetch(
         "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks",
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            isbn: book.isbn,
-            title: book.title,
-            subtitle: book.subtitle,
-            description: book.description,
-            publisher: book.publisher,
-            publicationYear: book.publicationYear,
-            edition: book.edition,
-            language: book.language,
-            categoryId: book.category,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+            isbn: book.isbn.trim(),
+            title: book.title.trim(),
+            subtitle: book.subtitle.trim(),
+            description: book.description.trim(),
+            publisher: book.publisher.trim(),
+            publicationYear: pubYear,
+            edition: book.edition.trim(),
+            language: book.language.trim(),
+            categoryId: parseInt(book.category) || null,
             authors: authors.filter((a) => a.trim() !== ""),
             copies: parseInt(book.copies) || 1,
-          }),
+            }),
         }
-      );
+        );
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to add book");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to add book");
 
-      setMessage("✅ Book successfully added!");
-      clearAll();
+        setMessage("✅ Book successfully added!");
+        clearAll();
     } catch (err: any) {
-      console.error("❌ Error adding book:", err);
-      setMessage(`❌ ${err.message}`);
+        console.error("❌ Error adding book:", err);
+        setMessage(`❌ ${err.message}`);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+    };
+
 
   // === RENDER FORM STEPS ===
   const renderStep = () => {
