@@ -106,7 +106,7 @@ const NewBooks: React.FC = () => {
 
     try {
       const res = await fetch(
-        "https://librax-backend.onrender.com/api/librarian/quick_actions/newbooks",
+        "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
