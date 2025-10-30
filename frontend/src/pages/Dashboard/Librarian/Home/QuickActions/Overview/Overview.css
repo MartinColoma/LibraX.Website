@@ -1,0 +1,49 @@
+:root {
+  --muji-red: #6d1f25;
+  --muji-brown: #7d5a44;
+  --muji-grey: #bfb8af;
+  --muji-ivory: #f5f3ee;
+  --muji-dark: #1f1f1f;
+}
+
+.overview-container {
+  padding: 1.5rem;
+  background-color: var(--muji-ivory);
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.overview-container h2 {
+  color: var(--muji-dark);
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.overview-card {
+  border-radius: 12px;
+  padding: 1.2rem;
+  text-align: center;
+  color: var(--muji-ivory);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.overview-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.overview-card h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.overview-card p {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
