@@ -239,51 +239,58 @@ const NewBooks: React.FC = () => {
   const handleMarcButtonClick = () => marcInputRef.current?.click();
 
   const handleMarcFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    setLoading(true);
-    setMessage("📄 Parsing MARC file...");
+  setLoading(true);
+  setMessage("📄 Parsing MARC file...");
 
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const res = await fetch(
-        "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/marc",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+    const res = await fetch(
+      "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/marc",
+      { method: "POST", body: formData }
+    );
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to parse MARC file");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to parse MARC file");
 
-      const record = data.records?.[0];
-      if (!record) throw new Error("No MARC record found");
+    const record = data.records?.[0];
+    if (!record) throw new Error("No MARC record found");
 
-      setBook((prev) => ({
-        ...prev,
-        title: record.title || "",
-        subtitle: record.subtitle || "",
-        isbn: record.isbn || "",
-        publisher: record.publisher || "",
-        publicationYear: record.publicationYear || "",
-        edition: record.edition || "",
-        language: record.language || "",
-        description: record.description || "",
-      }));
-      setAuthors(record.authors || [""]);
-      setMessage("✅ MARC file parsed successfully!");
-    } catch (err: any) {
-      console.error("❌ MARC upload error:", err);
-      setMessage(`❌ ${err.message}`);
-    } finally {
-      setLoading(false);
-      if (marcInputRef.current) marcInputRef.current.value = "";
-    }
-  };
+    // === Map MARC fields to form fields ===
+    setBook({
+      title: record.title?.main || "",
+      subtitle: record.title?.subtitle || "",
+      isbn: Array.isArray(record.isbn) ? record.isbn[0] : record.isbn || "",
+      publisher: record.publisher || "",
+      publicationYear: record.publicationYear || "",
+      edition: record.edition || "",
+      language: record.language || "",
+      description: record.description || "",
+      category: "",
+      categoryType: "",
+      copies: "",
+    });
+
+    setAuthors(
+      Array.isArray(record.authors)
+        ? record.authors.map((a: any) => a.name || "")
+        : [""]
+    );
+
+    setMessage("✅ MARC file parsed successfully!");
+  } catch (err: any) {
+    console.error("❌ MARC upload error:", err);
+    setMessage(`❌ ${err.message}`);
+  } finally {
+    setLoading(false);
+    if (marcInputRef.current) marcInputRef.current.value = "";
+  }
+};
+
 
   const totalCopies = Number(book.copies) || scannedUIDs.length;
   const allCopiesScanned = scannedUIDs.length >= totalCopies;
