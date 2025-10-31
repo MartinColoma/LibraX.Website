@@ -262,9 +262,9 @@ const NewBooks: React.FC = () => {
 
     // === Map MARC fields to form fields ===
     setBook({
-      title: record.title?.main || "",
-      subtitle: record.title?.subtitle || "",
-      isbn: Array.isArray(record.isbn) ? record.isbn[0] : record.isbn || "",
+      title: record.title || "",
+      subtitle: record.subtitle || "",
+      isbn: record.isbn || "",
       publisher: record.publisher || "",
       publicationYear: record.publicationYear || "",
       edition: record.edition || "",
@@ -275,13 +275,8 @@ const NewBooks: React.FC = () => {
       copies: "",
     });
 
-    setAuthors(
-      Array.isArray(record.authors)
-        ? record.authors
-            .filter((a: any) => a)        // remove null/undefined
-            .map((a: any) => a.name || "")
-        : [""]
-    );
+    setAuthors(Array.isArray(record.authors) ? record.authors : [""]);
+
 
     setMessage("✅ MARC file parsed successfully!");
   } catch (err: any) {
