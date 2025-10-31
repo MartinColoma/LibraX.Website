@@ -271,80 +271,182 @@ const NewBooks: React.FC = () => {
 
   const handleMarcButtonClick = () => marcInputRef.current?.click();
 
-  const handleMarcFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+const handleMarcFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    setLoading(true);
-    setMessage("📄 Parsing MARC file...");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch(
-        "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/marc",
-        { method: "POST", body: formData }
-      );
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to parse MARC file");
-
-      const record = data.records?.[0];
-      if (!record) throw new Error("No MARC record found in file");
-
-      console.log("📖 Received MARC record:", record);
-
-      // === Format publication year for date input ===
-      let formattedYear = "";
-      if (record.publicationYear) {
-        const year = record.publicationYear.match(/\d{4}/)?.[0];
-        if (year) {
-          formattedYear = `${year}-01-01`; // Format as YYYY-MM-DD for date input
-        }
-      }
-
-      // === Map language code to full name ===
-      const language = mapLanguageCode(record.language);
-
-      // === Update form with MARC data ===
-      setBook({
-        title: record.title || "",
-        subtitle: record.subtitle || "",
-        isbn: record.isbn || "",
-        publisher: record.publisher || "",
-        publicationYear: formattedYear,
-        edition: record.edition || "",
-        language: language,
-        description: record.description || "",
-        category: "",
-        categoryType: "",
-        copies: "1",
-      });
-
-      // === Set authors (ensure at least one empty field) ===
-      const marcAuthors = record.authors && record.authors.length > 0 
-        ? record.authors.filter((a: string) => a.trim() !== "")
-        : [""];
-      setAuthors(marcAuthors.length > 0 ? marcAuthors : [""]);
-
-      // === Store MARC metadata for reference ===
-      setMarcMetadata({
-        lcClassification: record.lcClassification,
-        deweyClassification: record.deweyClassification,
-        subject: record.subject,
-        series: record.series,
-      });
-
-      setMessage("✅ MARC file parsed successfully! Please verify and select category.");
-    } catch (err: any) {
-      console.error("❌ MARC upload error:", err);
-      setMessage(`❌ ${err.message}`);
-    } finally {
-      setLoading(false);
+  // Validate file extension
+  const validExtensions = ['.mrc', '.marc', '.dat', '.bin'];
+  const fileName = file.name.toLowerCase();
+  const hasValidExt = validExtensions.some(ext => fileName.endsWith(ext));
+  
+  if (!hasValidExt) {
+    const proceed = window.confirm(
+      `The file "${file.name}" doesn't have a standard MARC extension (.mrc, .marc).\n\n` +
+      `Do you want to try uploading it anyway?`
+    );
+    if (!proceed) {
       if (marcInputRef.current) marcInputRef.current.value = "";
+      return;
     }
-  };
+  }
+
+  setLoading(true);
+  setMessage("📄 Uploading and parsing MARC file...");
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    console.log("📤 Uploading MARC file:", file.name, `(${file.size} bytes)`);
+
+    const res = await fetch(
+      "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/marc",
+      { method: "POST", body: formData }
+    );
+
+    const data = await res.json();
+    
+    if (!res.ok) {
+      // Handle specific error cases with helpful messages
+      let errorMessage = data.message || "Failed to parse MARC file";
+      
+      if (data.hints && Array.isArray(data.hints)) {
+        errorMessage += "\n\n💡 Suggestions:\n" + data.hints.map((h: string) => `• ${h}`).join("\n");
+      } else if (data.hint) {
+        errorMessage += "\n\n💡 " + data.hint;
+      }
+      
+      if (data.details) {
+        console.error("MARC parsing details:", data.details);
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const record = data.records?.[0];
+    if (!record) {
+      throw new Error("No MARC record found in file");
+    }
+
+    console.log("📖 Received MARC record:", record);
+
+    // === Extract and validate data ===
+    
+    // Title (required)
+    const title = record.title?.trim() || "";
+    if (!title) {
+      throw new Error("MARC record contains no title. Please check the file.");
+    }
+
+    // Subtitle
+    const subtitle = record.subtitle?.trim() || "";
+
+    // ISBN - clean it up
+    const isbn = record.isbn?.trim() || "";
+
+    // Publisher - clean trailing punctuation
+    const publisher = record.publisher?.trim() || "";
+
+    // Publication year - format for date input
+    let formattedYear = "";
+    if (record.publicationYear) {
+      const year = record.publicationYear.match(/\d{4}/)?.[0];
+      if (year) {
+        formattedYear = `${year}-01-01`; // Format as YYYY-MM-DD for date input
+      }
+    }
+
+    // Edition
+    const edition = record.edition?.trim() || "";
+
+    // Language - map code to full name
+    const languageCode = record.language?.trim() || "";
+    const language = mapLanguageCode(languageCode);
+
+    // Description - use summary, notes, or physical description
+    const description = record.description?.trim() || "";
+
+    // Authors - filter out "Unknown Author" and empty strings
+    let marcAuthors = record.authors || [];
+    
+    // Remove "Unknown Author" placeholder
+    marcAuthors = marcAuthors.filter((a: string) => {
+      const cleaned = a.trim();
+      return cleaned !== "" && cleaned.toLowerCase() !== "unknown author";
+    });
+
+    // If no authors found, start with one empty field
+    if (marcAuthors.length === 0) {
+      marcAuthors = [""];
+    }
+
+    console.log("✅ Extracted data:");
+    console.log("  Title:", title);
+    console.log("  Authors:", marcAuthors);
+    console.log("  Publisher:", publisher);
+    console.log("  Year:", record.publicationYear);
+    console.log("  ISBN:", isbn);
+    console.log("  Language:", language);
+
+    // === Update form with MARC data ===
+    setBook({
+      title,
+      subtitle,
+      isbn,
+      publisher,
+      publicationYear: formattedYear,
+      edition,
+      language,
+      description,
+      category: "",
+      categoryType: "",
+      copies: "1",
+    });
+
+    // === Set authors ===
+    setAuthors(marcAuthors);
+
+    // === Store MARC metadata for reference ===
+    setMarcMetadata({
+      lcClassification: record.lcClassification,
+      deweyClassification: record.deweyClassification,
+      subject: record.subject,
+      series: record.series,
+    });
+
+    // === Success message with summary ===
+    const summary = [
+      title,
+      marcAuthors.length > 0 && marcAuthors[0] ? `by ${marcAuthors.join(", ")}` : "",
+      publisher ? `(${publisher})` : "",
+      record.publicationYear || ""
+    ].filter(Boolean).join(" ");
+
+    setMessage(`✅ MARC file parsed successfully!\n\n${summary}\n\nPlease verify the data and select a category.`);
+    
+  } catch (err: any) {
+    console.error("❌ MARC upload error:", err);
+    
+    // Format error message for display
+    const errorLines = err.message.split("\n");
+    const mainError = errorLines[0];
+    const details = errorLines.slice(1).join("\n");
+    
+    setMessage(`❌ ${mainError}`);
+    
+    // Show detailed error in alert if available
+    if (details) {
+      setTimeout(() => {
+        alert(`MARC Upload Failed\n\n${mainError}\n${details}`);
+      }, 100);
+    }
+    
+  } finally {
+    setLoading(false);
+    if (marcInputRef.current) marcInputRef.current.value = "";
+  }
+};
 
   const totalCopies = Number(book.copies) || scannedUIDs.length;
   const allCopiesScanned = scannedUIDs.length >= totalCopies;
