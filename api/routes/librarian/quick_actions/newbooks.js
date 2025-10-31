@@ -5,7 +5,8 @@ const { v4: uuidv4 } = require("uuid");
 // ====================
 // 🔹 MARC Parsing Dependencies
 // ====================
-const multer = require("multer");
+const storage = multer.memoryStorage(); // store files in memory
+const upload = multer({ storage });
 const { Readable } = require("stream");
 const marcjs = require("marcjs"); 
 
@@ -319,7 +320,7 @@ module.exports = (app) => {
     }
   });
 
-  
+
 // ====================
 // 🔹 UNIVERSAL MARC PARSER - Supports All Formats
 // ====================

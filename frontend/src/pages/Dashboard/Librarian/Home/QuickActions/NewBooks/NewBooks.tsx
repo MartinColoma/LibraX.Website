@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./NewBooks.css";
-import { Loader2, Upload, Plus, X, ChevronDown } from "lucide-react";
+import { Loader2, Plus, X, ChevronDown } from "lucide-react"; //Upload
 import usePageMeta from "../../../../../../hooks/usePageMeta";
 
 const NewBooks: React.FC = () => {
@@ -269,7 +269,7 @@ const NewBooks: React.FC = () => {
     }
   };
 
-  const handleMarcButtonClick = () => marcInputRef.current?.click();
+ // const handleMarcButtonClick = () => marcInputRef.current?.click();
 
 const handleMarcFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
@@ -459,9 +459,9 @@ const handleMarcFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
           <>
             <div className="form-header">
               <h2>Add New Book</h2>
-              <button type="button" className="marc-upload-btn" onClick={handleMarcButtonClick}>
+              {/* <button type="button" className="marc-upload-btn" onClick={handleMarcButtonClick}>
                 MARC Upload <Upload size={16} />
-              </button>
+              </button> */}
               <input
                 type="file"
                 ref={marcInputRef}
