@@ -321,62 +321,410 @@ module.exports = (app) => {
 
   
 // ====================
-// 🔹 Helper: Parse MARC file with marcjs (stream-based)
+// 🔹 UNIVERSAL MARC PARSER - Supports All Formats
 // ====================
-function parseMARC(buffer) {
+const marcjs = require("marcjs");
+const { parseString } = require("xml2js");
+const iconv = require("iconv-lite");
+
+// ====================
+// 🔹 Detect MARC Format
+// ====================
+function detectMARCFormat(buffer) {
+  const preview = buffer.slice(0, 100).toString('utf8', 0, 100);
+  const hexPreview = buffer.slice(0, 10).toString('hex');
+  
+  // Check for MARCXML
+  if (preview.includes('<?xml') || preview.includes('<collection') || preview.includes('<record')) {
+    return 'MARCXML';
+  }
+  
+  // Check for JSON
+  if (preview.trim().startsWith('{') || preview.trim().startsWith('[')) {
+    return 'JSON';
+  }
+  
+  // Check for line-delimited MARC (MRK format)
+  if (preview.includes('=LDR') || preview.includes('=001') || preview.match(/^=\d{3}/m)) {
+    return 'MRK';
+  }
+  
+  // Check if first 5 chars are digits (MARC21 binary record length)
+  const firstFive = buffer.toString('utf8', 0, 5);
+  if (/^\d{5}$/.test(firstFive)) {
+    // Check encoding - MARC-8 vs UTF-8
+    const leader = buffer.slice(0, 24).toString('utf8');
+    if (leader.length >= 9 && leader[9] === 'a') {
+      return 'MARC21_UTF8';
+    }
+    return 'MARC21_MARC8';
+  }
+  
+  // Check for ISO 2709 structure with different encoding
+  if (buffer.length >= 24) {
+    const possibleLength = parseInt(buffer.toString('ascii', 0, 5), 10);
+    if (!isNaN(possibleLength) && possibleLength > 0 && possibleLength < buffer.length + 1000) {
+      return 'MARC21_BINARY';
+    }
+  }
+  
+  return 'UNKNOWN';
+}
+
+// ====================
+// 🔹 Parse MARC21 Binary (MARC-8 or UTF-8)
+// ====================
+function parseMARCBinary(buffer, encoding = 'binary') {
   return new Promise((resolve, reject) => {
-    const records = [];
-    let hasError = false;
-    
     try {
-      // Create readable stream from buffer
-      const stream = Readable.from(buffer);
+      const records = [];
+      let pos = 0;
       
-      // Create parser - marcjs.parse returns a transform stream
-      const parser = marcjs.parse();
-      
-      // Handle data events (each record)
-      parser.on('data', (record) => {
-        try {
-          records.push(record);
-        } catch (err) {
-          console.error("Error processing record:", err);
+      while (pos < buffer.length) {
+        // Skip any trailing whitespace or padding
+        while (pos < buffer.length && buffer[pos] <= 32) {
+          pos++;
         }
-      });
-      
-      // Handle end event
-      parser.on('end', () => {
-        if (hasError) return; // Already rejected
         
-        if (records.length === 0) {
-          reject(new Error('No valid MARC records found in file'));
-        } else {
-          console.log(`✅ Parsed ${records.length} record(s)`);
-          resolve(records);
+        if (pos + 5 > buffer.length) break;
+        
+        // Read record length
+        const lengthStr = buffer.toString('ascii', pos, pos + 5);
+        const recordLength = parseInt(lengthStr, 10);
+        
+        if (isNaN(recordLength) || recordLength === 0) {
+          console.warn(`Invalid record length at position ${pos}: "${lengthStr}"`);
+          break;
+        }
+        
+        if (pos + recordLength > buffer.length) {
+          console.warn(`Record length ${recordLength} exceeds buffer at position ${pos}`);
+          break;
+        }
+        
+        // Extract record
+        const recordBuffer = buffer.slice(pos, pos + recordLength);
+        
+        try {
+          // Convert to appropriate encoding
+          let marcString;
+          if (encoding === 'utf8') {
+            marcString = recordBuffer.toString('utf8');
+          } else if (encoding === 'marc8') {
+            // MARC-8 to UTF-8 conversion using iconv-lite
+            marcString = iconv.decode(recordBuffer, 'ISO-8859-1');
+          } else {
+            // Binary/ISO-8859-1
+            marcString = recordBuffer.toString('binary');
+          }
+          
+          // Parse with marcjs
+          const reader = new marcjs.Iso2709Reader(marcString);
+          const record = reader.next();
+          
+          if (record && record.fields && record.fields.length > 0) {
+            records.push(record);
+          }
+        } catch (err) {
+          console.warn(`Failed to parse record at position ${pos}:`, err.message);
+        }
+        
+        pos += recordLength;
+      }
+      
+      if (records.length === 0) {
+        reject(new Error('No valid MARC records found in binary format'));
+      } else {
+        resolve(records);
+      }
+      
+    } catch (err) {
+      reject(new Error(`Binary MARC parsing failed: ${err.message}`));
+    }
+  });
+}
+
+// ====================
+// 🔹 Parse MARCXML
+// ====================
+function parseMARCXML(buffer) {
+  return new Promise((resolve, reject) => {
+    try {
+      const xmlString = buffer.toString('utf8');
+      
+      parseString(xmlString, { explicitArray: false, trim: true }, (err, result) => {
+        if (err) {
+          return reject(new Error(`XML parsing failed: ${err.message}`));
+        }
+        
+        try {
+          const records = [];
+          
+          // Handle different MARCXML structures
+          let marcRecords = [];
+          if (result.collection && result.collection.record) {
+            marcRecords = Array.isArray(result.collection.record) 
+              ? result.collection.record 
+              : [result.collection.record];
+          } else if (result.record) {
+            marcRecords = Array.isArray(result.record) ? result.record : [result.record];
+          } else if (result.records && result.records.record) {
+            marcRecords = Array.isArray(result.records.record)
+              ? result.records.record
+              : [result.records.record];
+          }
+          
+          for (const xmlRecord of marcRecords) {
+            const record = convertXMLToMARC(xmlRecord);
+            if (record) {
+              records.push(record);
+            }
+          }
+          
+          if (records.length === 0) {
+            reject(new Error('No valid records found in MARCXML'));
+          } else {
+            resolve(records);
+          }
+        } catch (err) {
+          reject(new Error(`MARCXML conversion failed: ${err.message}`));
         }
       });
-      
-      // Handle errors
-      parser.on('error', (error) => {
-        hasError = true;
-        console.error("Parser error:", error.message);
-        reject(new Error(`MARC parsing failed: ${error.message}`));
-      });
-      
-      // Pipe the stream through the parser
-      stream.pipe(parser);
-      
     } catch (err) {
       reject(err);
     }
   });
 }
 
-// ====================
-// 🔹 COMPLETE MARC ROUTE
-// ====================
-const upload = multer({ storage: multer.memoryStorage() });
+// Convert MARCXML structure to marcjs format
+function convertXMLToMARC(xmlRecord) {
+  try {
+    const record = {
+      leader: xmlRecord.leader || '00000nam a2200000 a 4500',
+      fields: []
+    };
+    
+    if (!xmlRecord.controlfield && !xmlRecord.datafield) {
+      return null;
+    }
+    
+    // Control fields
+    const controlFields = Array.isArray(xmlRecord.controlfield)
+      ? xmlRecord.controlfield
+      : xmlRecord.controlfield ? [xmlRecord.controlfield] : [];
+      
+    for (const cf of controlFields) {
+      if (cf.$ && cf.$.tag) {
+        record.fields.push([cf.$.tag, cf._ || '']);
+      }
+    }
+    
+    // Data fields
+    const dataFields = Array.isArray(xmlRecord.datafield)
+      ? xmlRecord.datafield
+      : xmlRecord.datafield ? [xmlRecord.datafield] : [];
+      
+    for (const df of dataFields) {
+      if (!df.$ || !df.$.tag) continue;
+      
+      const tag = df.$.tag;
+      const ind1 = df.$.ind1 || ' ';
+      const ind2 = df.$.ind2 || ' ';
+      const indicators = ind1 + ind2;
+      
+      const field = [tag, indicators];
+      
+      const subfields = Array.isArray(df.subfield)
+        ? df.subfield
+        : df.subfield ? [df.subfield] : [];
+        
+      for (const sf of subfields) {
+        if (sf.$ && sf.$.code) {
+          field.push(sf.$.code, sf._ || '');
+        }
+      }
+      
+      record.fields.push(field);
+    }
+    
+    return record;
+  } catch (err) {
+    console.error('Error converting XML record:', err);
+    return null;
+  }
+}
 
+// ====================
+// 🔹 Parse Line-Delimited MARC (MRK format)
+// ====================
+function parseMRK(buffer) {
+  return new Promise((resolve, reject) => {
+    try {
+      const text = buffer.toString('utf8');
+      const lines = text.split(/\r?\n/);
+      const records = [];
+      let currentRecord = null;
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        
+        // New record starts with =LDR
+        if (trimmed.startsWith('=LDR')) {
+          if (currentRecord) {
+            records.push(currentRecord);
+          }
+          currentRecord = {
+            leader: trimmed.substring(5).trim() || '00000nam a2200000 a 4500',
+            fields: []
+          };
+          continue;
+        }
+        
+        // Field line: =XXX  indicators$aValue$bValue
+        const match = trimmed.match(/^=(\d{3})\s+(.*)$/);
+        if (match && currentRecord) {
+          const tag = match[1];
+          const content = match[2];
+          
+          if (parseInt(tag) < 10) {
+            // Control field
+            currentRecord.fields.push([tag, content]);
+          } else {
+            // Data field
+            const indicators = content.substring(0, 2) || '  ';
+            const subfieldData = content.substring(2);
+            
+            const field = [tag, indicators];
+            
+            // Parse subfields
+            const subfields = subfieldData.split('$').slice(1);
+            for (const sf of subfields) {
+              if (sf.length > 0) {
+                field.push(sf[0], sf.substring(1));
+              }
+            }
+            
+            currentRecord.fields.push(field);
+          }
+        }
+      }
+      
+      // Add last record
+      if (currentRecord) {
+        records.push(currentRecord);
+      }
+      
+      if (records.length === 0) {
+        reject(new Error('No valid records found in MRK format'));
+      } else {
+        resolve(records);
+      }
+      
+    } catch (err) {
+      reject(new Error(`MRK parsing failed: ${err.message}`));
+    }
+  });
+}
+
+// ====================
+// 🔹 Parse MARC JSON
+// ====================
+function parseMARCJSON(buffer) {
+  return new Promise((resolve, reject) => {
+    try {
+      const jsonString = buffer.toString('utf8');
+      const data = JSON.parse(jsonString);
+      
+      const records = Array.isArray(data) ? data : [data];
+      
+      // Validate and normalize
+      const validRecords = records.filter(r => 
+        r && typeof r === 'object' && r.fields && Array.isArray(r.fields)
+      );
+      
+      if (validRecords.length === 0) {
+        reject(new Error('No valid records found in JSON format'));
+      } else {
+        resolve(validRecords);
+      }
+      
+    } catch (err) {
+      reject(new Error(`JSON parsing failed: ${err.message}`));
+    }
+  });
+}
+
+// ====================
+// 🔹 UNIVERSAL PARSE FUNCTION
+// ====================
+async function parseUniversalMARC(buffer) {
+  const format = detectMARCFormat(buffer);
+  
+  console.log(`📋 Detected format: ${format}`);
+  
+  try {
+    switch (format) {
+      case 'MARCXML':
+        return await parseMARCXML(buffer);
+        
+      case 'MARC21_UTF8':
+        return await parseMARCBinary(buffer, 'utf8');
+        
+      case 'MARC21_MARC8':
+      case 'MARC21_BINARY':
+        return await parseMARCBinary(buffer, 'binary');
+        
+      case 'MRK':
+        return await parseMRK(buffer);
+        
+      case 'JSON':
+        return await parseMARCJSON(buffer);
+        
+      default:
+        // Try all methods as fallback
+        console.log('⚠️ Unknown format, trying all parsers...');
+        
+        const errors = [];
+        
+        // Try binary first
+        try {
+          return await parseMARCBinary(buffer, 'binary');
+        } catch (e) {
+          errors.push(`Binary: ${e.message}`);
+        }
+        
+        // Try UTF-8
+        try {
+          return await parseMARCBinary(buffer, 'utf8');
+        } catch (e) {
+          errors.push(`UTF-8: ${e.message}`);
+        }
+        
+        // Try MARCXML
+        try {
+          return await parseMARCXML(buffer);
+        } catch (e) {
+          errors.push(`XML: ${e.message}`);
+        }
+        
+        // Try MRK
+        try {
+          return await parseMRK(buffer);
+        } catch (e) {
+          errors.push(`MRK: ${e.message}`);
+        }
+        
+        throw new Error(`All parsing methods failed:\n${errors.join('\n')}`);
+    }
+  } catch (err) {
+    throw err;
+  }
+}
+
+// ====================
+// 🔹 UPDATED ROUTE
+// ====================
 router.post("/marc", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -388,210 +736,119 @@ router.post("/marc", upload.single("file"), async (req, res) => {
     console.log("File size:", req.file.size, "bytes");
     console.log("File mimetype:", req.file.mimetype);
 
-    // Validate file size
     if (req.file.size === 0) {
-      return res.status(400).json({ message: "Empty MARC file uploaded" });
+      return res.status(400).json({ message: "Empty file uploaded" });
     }
 
-    // Check file extension
-    const fileName = req.file.originalname.toLowerCase();
-    const validExtensions = ['.mrc', '.marc', '.dat', '.bin'];
-    const hasValidExt = validExtensions.some(ext => fileName.endsWith(ext));
-    
-    if (!hasValidExt) {
-      console.warn("⚠️ Unusual file extension:", fileName);
-    }
-
-    // Log first 100 bytes for debugging
-    const preview = req.file.buffer.slice(0, 100);
-    console.log("\n📋 File Preview:");
-    console.log("HEX:", preview.toString('hex').substring(0, 60) + "...");
-    console.log("ASCII:", preview.toString('utf8', 0, 30).replace(/[^\x20-\x7E]/g, '.') + "...");
-    
-    // Check for MARCXML
-    const headerStr = preview.toString('utf8', 0, 50);
-    if (headerStr.includes('<?xml')) {
-      return res.status(400).json({ 
-        message: "MARCXML format detected",
-        hint: "This appears to be a MARCXML file. Please convert it to MARC21 binary format (.mrc) using a tool like MarcEdit."
-      });
-    }
-
-    // Parse MARC file
+    // Parse with universal parser
     let parsedRecords;
     try {
-      console.log("\n🔄 Parsing MARC file with marcjs...");
-      parsedRecords = await parseMARC(req.file.buffer);
+      console.log("\n🔄 Parsing MARC file (auto-detecting format)...");
+      parsedRecords = await parseUniversalMARC(req.file.buffer);
+      console.log(`✅ Successfully parsed ${parsedRecords.length} record(s)`);
     } catch (parseError) {
-      console.error("❌ MARC parsing error:", parseError.message);
+      console.error("❌ Parsing error:", parseError.message);
       
       return res.status(400).json({ 
-        message: "Invalid MARC file format",
+        message: "Unable to parse MARC file",
         details: parseError.message,
-        hints: [
-          "Ensure the file is in MARC21 binary format (.mrc or .marc)",
-          "The file may be corrupted or in an unsupported format",
-          "Try opening the file in MarcEdit to verify it's valid",
-          "Some MARC files use special encodings - try re-exporting from your library system"
+        supportedFormats: [
+          "MARC21 Binary (.mrc, .marc)",
+          "MARCXML (.xml)",
+          "Line-delimited MARC (.mrk)",
+          "MARC JSON",
+          "UTF-8 and MARC-8 encodings"
         ]
       });
     }
     
-    // Validate parsed records
-    if (!parsedRecords || !Array.isArray(parsedRecords) || parsedRecords.length === 0) {
-      console.error("❌ No valid MARC records found");
+    if (!parsedRecords || parsedRecords.length === 0) {
       return res.status(400).json({ 
-        message: "No valid MARC records found in file",
-        hint: "The file was parsed but contains no usable records"
+        message: "No valid MARC records found in file"
       });
     }
 
     console.log(`\n📚 Processing ${parsedRecords.length} MARC record(s)`);
     console.log("========================================\n");
 
+    // Extract bibliographic data
     const records = [];
-
+    
     for (let idx = 0; idx < parsedRecords.length; idx++) {
       const record = parsedRecords[idx];
       
       try {
-        console.log(`🔍 Processing record ${idx + 1}/${parsedRecords.length}`);
-        
-        // Validate record structure
-        if (!record || typeof record !== 'object') {
-          console.warn(`   ⚠️ Record ${idx + 1} is not an object, skipping`);
+        if (!record?.fields?.length) {
+          console.warn(`⚠️ Record ${idx + 1} has no fields, skipping`);
           continue;
         }
         
-        if (!record.fields || !Array.isArray(record.fields)) {
-          console.warn(`   ⚠️ Record ${idx + 1} has no fields array, skipping`);
-          continue;
-        }
-        
-        console.log(`   Fields count: ${record.fields.length}`);
-        
-        // Log sample field to understand structure
-        if (record.fields.length > 0) {
-          const sampleField = record.fields.find(f => Array.isArray(f) && f.length > 2);
-          if (sampleField) {
-            console.log(`   Sample field structure:`, JSON.stringify(sampleField));
-          }
-        }
-
-        // Extract title and subtitle
+        // Use your existing extraction logic
         const title = cleanText(getField(record, "245", "a"));
-        const subtitle = cleanText(getField(record, "245", "b"));
-        
-        console.log(`   Title: ${title || 'NOT FOUND'}`);
         
         if (!title) {
-          console.warn(`   ⚠️ No title found (245$a), skipping record`);
+          console.warn(`⚠️ Record ${idx + 1}: No title found, skipping`);
           continue;
         }
         
-        // Extract ISBN
-        let isbn = getField(record, "020", "a");
-        if (!isbn) isbn = getField(record, "020", "z");
-        isbn = cleanISBN(isbn);
-        console.log(`   ISBN: ${isbn || 'N/A'}`);
-        
-        // Extract authors
-        const authors = extractAuthors(record);
-        console.log(`   Authors: ${authors.join(", ") || 'N/A'}`);
-        
-        // Extract publisher
-        const rawPublisher = getField(record, "260", "b") || getField(record, "264", "b");
-        const publisher = cleanPublisher(rawPublisher);
-        console.log(`   Publisher: ${publisher || 'N/A'}`);
-        
-        // Extract publication year
-        const rawPubDate = getField(record, "260", "c") || getField(record, "264", "c");
-        const publicationYear = extractYear(rawPubDate);
-        console.log(`   Year: ${publicationYear || 'N/A'}`);
-        
-        // Extract edition
-        const edition = cleanText(getField(record, "250", "a"));
-        
-        // Extract language
-        let language = getField(record, "041", "a");
-        if (!language) {
-          const field008 = getControlField(record, "008");
-          if (field008 && field008.length >= 38) {
-            language = field008.substring(35, 38).trim();
-          }
-        }
-        console.log(`   Language: ${language || 'N/A'}`);
-        
-        // Extract descriptions
-        const physicalDesc = getField(record, "300", "a");
-        const notes = getField(record, "500", "a");
-        const summary = getField(record, "520", "a");
-        const description = summary || notes || physicalDesc;
-        
-        // Extract classifications
-        const lcClassification = getField(record, "050", "a");
-        const deweyClassification = getField(record, "082", "a");
-        
-        // Extract subjects (all 650$a)
-        const subjects = getAllFieldValues(record, "650", "a");
-        const subject = subjects.map(s => cleanText(s)).join("; ");
-        
-        // Extract series
-        const series = getField(record, "490", "a");
-        
-        // Control fields
-        const controlNumber = getControlField(record, "001");
-        const lastModified = getControlField(record, "005");
-
         const parsed = {
           title,
-          subtitle,
-          isbn,
-          authors: authors.length > 0 ? authors : ["Unknown Author"],
-          publisher,
-          publicationYear,
-          edition,
-          language,
-          description,
-          lcClassification,
-          deweyClassification,
-          subject,
-          series,
-          notes,
-          physicalDescription: physicalDesc,
-          controlNumber,
-          lastModified,
+          subtitle: cleanText(getField(record, "245", "b")),
+          isbn: cleanISBN(getField(record, "020", "a") || getField(record, "020", "z")),
+          authors: extractAuthors(record),
+          publisher: cleanPublisher(getField(record, "260", "b") || getField(record, "264", "b")),
+          publicationYear: extractYear(getField(record, "260", "c") || getField(record, "264", "c")),
+          edition: cleanText(getField(record, "250", "a")),
+          language: getField(record, "041", "a") || extractLanguageFrom008(record),
+          description: getField(record, "520", "a") || getField(record, "500", "a"),
+          lcClassification: getField(record, "050", "a"),
+          deweyClassification: getField(record, "082", "a"),
+          subject: getAllFieldValues(record, "650", "a").map(cleanText).join("; "),
+          series: getField(record, "490", "a"),
+          notes: getField(record, "500", "a"),
+          physicalDescription: getField(record, "300", "a"),
+          controlNumber: getControlField(record, "001"),
+          lastModified: getControlField(record, "005"),
         };
 
-        console.log("   ✅ Successfully extracted record\n");
         records.push(parsed);
         
       } catch (err) {
-        console.error(`❌ Error processing record ${idx + 1}:`, err.message);
-        console.error("Stack:", err.stack);
+        console.error(`❌ Error extracting record ${idx + 1}:`, err.message);
       }
     }
 
     if (records.length === 0) {
       return res.status(400).json({ 
-        message: "No usable bibliographic data found",
-        hint: "The file was parsed but no records contained valid title data (245$a)"
+        message: "No usable bibliographic data found"
       });
     }
 
-    console.log(`✅ Successfully extracted ${records.length} of ${parsedRecords.length} record(s)\n`);
-    res.status(200).json({ records });
+    console.log(`✅ Extracted ${records.length} of ${parsedRecords.length} record(s)\n`);
+    res.status(200).json({ 
+      records,
+      format: detectMARCFormat(req.file.buffer),
+      totalParsed: parsedRecords.length,
+      totalExtracted: records.length
+    });
 
   } catch (err) {
     console.error("\n❌ Unexpected error:", err);
-    console.error("Stack:", err.stack);
-    
     res.status(500).json({ 
-      message: "Unexpected server error while processing MARC file",
+      message: "Server error processing MARC file",
       error: err.message
     });
   }
 });
+
+// Helper to extract language from 008 field
+function extractLanguageFrom008(record) {
+  const field008 = getControlField(record, "008");
+  if (field008 && field008.length >= 38) {
+    return field008.substring(35, 38).trim();
+  }
+  return "";
+}
 
 // Note: getField, getControlField, extractAuthors, cleanText, etc. 
 // helper func
