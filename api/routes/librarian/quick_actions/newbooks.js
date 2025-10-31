@@ -1,6 +1,7 @@
 const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
 const { v4: uuidv4 } = require("uuid");
+const multer = require("multer");
 
 // ====================
 // 🔹 MARC Parsing Dependencies
