@@ -277,7 +277,9 @@ const NewBooks: React.FC = () => {
 
     setAuthors(
       Array.isArray(record.authors)
-        ? record.authors.map((a: any) => a.name || "")
+        ? record.authors
+            .filter((a: any) => a)        // remove null/undefined
+            .map((a: any) => a.name || "")
         : [""]
     );
 
