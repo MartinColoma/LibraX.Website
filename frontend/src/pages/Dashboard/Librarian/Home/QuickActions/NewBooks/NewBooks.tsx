@@ -32,14 +32,13 @@ const NewBooks: React.FC = () => {
 
   const [authors, setAuthors] = useState<string[]>([""]);
 
-// === NFC STATES ===
-const [nfcSupported, setNfcSupported] = useState(false);
-const [nfcReading, setNfcReading] = useState(false);
-const [nfcMessage, setNfcMessage] = useState("");
-const [scannedUIDs, setScannedUIDs] = useState<string[]>([]); // track unique UIDs
-const nfcAbortControllerRef = useRef<AbortController | null>(null);
-const ndefReaderRef = useRef<any>(null);
-
+  // === NFC STATES ===
+  const [nfcSupported, setNfcSupported] = useState(false);
+  const [nfcReading, setNfcReading] = useState(false);
+  const [nfcMessage, setNfcMessage] = useState("");
+  const [scannedUIDs, setScannedUIDs] = useState<string[]>([]);
+  const nfcAbortControllerRef = useRef<AbortController | null>(null);
+  const ndefReaderRef = useRef<any>(null);
 
   // === FETCH AUTHORS ===
   useEffect(() => {
@@ -85,22 +84,22 @@ const ndefReaderRef = useRef<any>(null);
     }
   }, [book.categoryType, categories]);
 
-useEffect(() => {
-  const checkNFCSupport = async () => {
-    if ("NDEFReader" in window) {
-      try {
-        const permission = await navigator.permissions.query({ name: "nfc" as any });
-        setNfcSupported(permission.state !== "denied");
-      } catch {
+  // === CHECK NFC SUPPORT ===
+  useEffect(() => {
+    const checkNFCSupport = async () => {
+      if ("NDEFReader" in window) {
+        try {
+          const permission = await navigator.permissions.query({ name: "nfc" as any });
+          setNfcSupported(permission.state !== "denied");
+        } catch {
+          setNfcSupported(false);
+        }
+      } else {
         setNfcSupported(false);
       }
-    } else {
-      setNfcSupported(false);
-    }
-  };
-  checkNFCSupport();
-}, []);
-
+    };
+    checkNFCSupport();
+  }, []);
 
   // === NFC HANDLERS ===
   const startNFCReading = async () => {
@@ -171,7 +170,6 @@ useEffect(() => {
   };
 
   const addAuthorField = () => setAuthors([...authors, ""]);
-
   const removeAuthorField = (index: number) =>
     setAuthors(authors.filter((_, i) => i !== index));
 
@@ -198,7 +196,6 @@ useEffect(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step < 3) return;
 
     setLoading(true);
     setMessage(null);
@@ -242,10 +239,9 @@ useEffect(() => {
       setLoading(false);
     }
   };
-const allCopiesScanned =
-  book.copies && !isNaN(Number(book.copies))
-    ? scannedUIDs.length >= Number(book.copies)
-    : scannedUIDs.length > 0; // fallback if copies not set
+
+  const totalCopies = Number(book.copies) || scannedUIDs.length;
+  const allCopiesScanned = scannedUIDs.length >= totalCopies;
 
   // === RENDER STEPS ===
   const renderStep = () => {
@@ -290,7 +286,6 @@ const allCopiesScanned =
             />
           </>
         );
-
       case 2:
         const uniqueCategoryTypes = Array.from(
           new Set(categories.map((c) => c.category_type))
@@ -391,92 +386,88 @@ const allCopiesScanned =
             />
           </>
         );
-
-        case 3:
+      case 3:
         return (
-            <>
+          <>
             <h2>Add New Book</h2>
             <label>Author(s):</label>
             {authors.map((author, index) => (
-                <div key={index} className="author-input-group">
+              <div key={index} className="author-input-group">
                 <div className="combobox">
-                    <input
+                  <input
                     value={author}
                     onChange={(e) => handleAuthorChange(index, e.target.value)}
                     placeholder={`Author ${index + 1}`}
                     list={`author-suggestions-${index}`}
-                    />
-                    <datalist id={`author-suggestions-${index}`}>
+                  />
+                  <datalist id={`author-suggestions-${index}`}>
                     {allAuthors
-                        .filter((a) =>
+                      .filter((a) =>
                         a.name.toLowerCase().includes(author.toLowerCase())
-                        )
-                        .map((a) => (
+                      )
+                      .map((a) => (
                         <option key={a.author_id} value={a.name} />
-                        ))}
-                    </datalist>
+                      ))}
+                  </datalist>
                 </div>
                 {authors.length > 1 && (
-                    <button
+                  <button
                     type="button"
                     className="remove-author-btn"
                     onClick={() => removeAuthorField(index)}
-                    >
+                  >
                     <X size={16} />
-                    </button>
+                  </button>
                 )}
-                </div>
+              </div>
             ))}
             <button type="button" className="add-author-btn" onClick={addAuthorField}>
-                <Plus size={16} /> Add Another Author
+              <Plus size={16} /> Add Another Author
             </button>
 
             <label>Quantity Available:</label>
             <input
-                type="number"
-                name="copies"
-                value={book.copies}
-                onChange={handleChange}
-                placeholder="Enter total number of copies"
+              type="number"
+              name="copies"
+              value={book.copies}
+              onChange={handleChange}
+              placeholder="Enter total number of copies"
             />
-            </>
+          </>
         );
-        case 4:
+      case 4:
         return (
-            <>
+          <>
             <h2>Scan NFC Tags</h2>
-            <p>
-                Total Copies to Scan: {book.copies || "N/A"}
-            </p>
+            <p>Total Copies to Scan: {book.copies || "N/A"}</p>
             <div className="nfc-section">
-                <h3>📱 NFC Scanner</h3>
+              <h3>📱 NFC Scanner</h3>
 
-                {nfcSupported ? (
+              {nfcSupported ? (
                 <button
-                    type="button"
-                    onClick={nfcReading ? stopNFCReading : startNFCReading}
-                    className="nfc-btn"
+                  type="button"
+                  onClick={nfcReading ? stopNFCReading : startNFCReading}
+                  className="nfc-btn"
                 >
-                    {nfcReading ? "🛑 Stop NFC Reading" : "📱 Start NFC Reading"}
+                  {nfcReading ? "🛑 Stop NFC Reading" : "📱 Start NFC Reading"}
                 </button>
-                ) : (
+              ) : (
                 <p>NFC not supported on this device.</p>
-                )}
+              )}
 
-                <p className="nfc-message">
+              <p className="nfc-message">
                 Scanned Copies: {scannedUIDs.length} / {book.copies || "N/A"}
-                </p>
-                {nfcMessage && <p className="nfc-message">{nfcMessage}</p>}
+              </p>
+              {nfcMessage && <p className="nfc-message">{nfcMessage}</p>}
 
-                <ul className="nfc-uid-list">
+              <ul className="nfc-uid-list">
                 {scannedUIDs.map((uid, i) => (
-                    <li key={i}>{uid}</li>
+                  <li key={i}>{uid}</li>
                 ))}
-                </ul>
+              </ul>
             </div>
-            </>
+          </>
         );
-
     }
   };
 
@@ -486,50 +477,45 @@ const allCopiesScanned =
         className="form-section"
         onSubmit={(e) => {
           e.preventDefault();
-          if (step === 3) handleSubmit(e);
+          if (step === 4) handleSubmit(e); // 🔹 corrected step check
         }}
       >
         {renderStep()}
 
         <div className="form-buttons">
-        {step > 1 && (
+          {step > 1 && (
             <button
-                type="button"
-                className="back-btn"
-                onClick={(e) => {
+              type="button"
+              className="back-btn"
+              onClick={(e) => {
                 e.preventDefault();
                 setStep(step - 1);
-                }}
+              }}
             >
-                Back
+              Back
             </button>
-            )}
+          )}
 
-            {step < 4 ? (
-                <button
-                    type="button"
-                    className="next-btn"
-                    onClick={(e) => {
-                    e.preventDefault();
-                    setStep(step + 1);
-                    }}
-                >
-                    Next
-                </button>
-                ) : (
-                <button
-                    type="submit"
-                    className="add-btn"
-                    disabled={loading || !allCopiesScanned} // 🔹 disable until all scanned
-                >
-                    {loading ? (
-                    <Loader2 className="spin" size={20} />
-                    ) : (
-                    "Add Book"
-                    )}
-                </button>
-            )}
-
+          {step < 4 ? (
+            <button
+              type="button"
+              className="next-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                setStep(step + 1);
+              }}
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="add-btn"
+              disabled={loading || !allCopiesScanned}
+            >
+              {loading ? <Loader2 className="spin" size={20} /> : "Add Book"}
+            </button>
+          )}
         </div>
 
         {message && <p className="status-msg">{message}</p>}
@@ -567,8 +553,7 @@ const allCopiesScanned =
           <strong>Category Type:</strong> {book.categoryType || "[Category Type]"}
         </p>
         <p>
-          <strong>Language:</strong> {book.language || "[Language]"}
-        </p>
+          <strong>Language:</strong> {book.language || "[Language]"}</p>
         <p>
           <strong>Quantity Available:</strong> {scannedUIDs.length || book.copies || "0"}
         </p>
