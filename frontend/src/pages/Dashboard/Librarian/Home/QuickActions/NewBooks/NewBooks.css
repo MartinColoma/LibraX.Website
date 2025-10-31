@@ -2,25 +2,28 @@
 .newBooks-wrapper {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  background-color: #f7eee5; /* soft beige */
-  color: #3b0b0b; /* dark maroon text */
-  padding: 2rem 3rem;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(75, 50, 30, 0.1);
+  align-items: stretch;
+  background-color: transparent; /* Inherit from parent */
+  color: #3b0b0b;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
   font-family: "Inter", sans-serif;
+  width: 100%;
+  min-height: 100%;
+  gap: 2rem;
 }
 
 /* === Left Form Section === */
 .form-section {
   flex: 1;
-  max-width: 48%;
   display: flex;
   flex-direction: column;
   background-color: #fbf6f2;
   padding: 1.5rem 2rem;
   border-radius: 8px;
-  border-right: 1px solid #e0cfc0;
+  border: 1px solid #e0cfc0;
+  box-shadow: 0 2px 8px rgba(75, 50, 30, 0.08);
 }
 
 /* Header & MARC Upload */
@@ -29,6 +32,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .form-header h2 {
@@ -56,15 +61,15 @@
 }
 
 /* Labels & Inputs */
-label {
+.newBooks-wrapper label {
   font-weight: 600;
   margin-top: 1rem;
   margin-bottom: 0.3rem;
   font-size: 0.95rem;
 }
 
-input,
-textarea {
+.newBooks-wrapper input,
+.newBooks-wrapper textarea {
   width: 100%;
   padding: 0.6rem 0.8rem;
   border-radius: 6px;
@@ -73,15 +78,16 @@ textarea {
   font-size: 0.95rem;
   outline: none;
   transition: border 0.2s ease-in-out;
+  box-sizing: border-box;
 }
 
-input:focus,
-textarea:focus {
+.newBooks-wrapper input:focus,
+.newBooks-wrapper textarea:focus {
   border-color: #aa6f4c;
   box-shadow: 0 0 0 1px #aa6f4c3b;
 }
 
-textarea {
+.newBooks-wrapper textarea {
   resize: none;
   height: 5rem;
 }
@@ -93,9 +99,10 @@ textarea {
   align-items: center;
   gap: 0.6rem;
   margin-top: 1.5rem;
+  flex-wrap: wrap;
 }
 
-button {
+.newBooks-wrapper button {
   font-weight: 600;
   font-size: 0.95rem;
   padding: 0.6rem 1.4rem;
@@ -144,6 +151,12 @@ button {
   background-color: #d7a45c;
 }
 
+.add-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* Loader icon rotation */
 .spin {
   animation: spin 1s linear infinite;
@@ -165,12 +178,11 @@ button {
 /* === Right Preview Section === */
 .preview-section {
   flex: 1;
-  max-width: 50%;
   background-color: #fbf6f2;
   border-radius: 8px;
   padding: 2rem;
-  margin-left: 2rem;
-  border-left: 1px solid #e0cfc0;
+  border: 1px solid #e0cfc0;
+  box-shadow: 0 2px 8px rgba(75, 50, 30, 0.08);
 }
 
 .preview-section h2 {
@@ -216,6 +228,12 @@ button {
   cursor: pointer;
   font-size: 0.9rem;
   transition: background 0.2s;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .remove-author-btn:hover {
@@ -234,6 +252,7 @@ button {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  min-height: 40px;
 }
 
 .add-author-btn:hover {
@@ -243,6 +262,7 @@ button {
 /* === Combobox Styles === */
 .combobox {
   position: relative;
+  width: 100%;
 }
 
 .combobox input {
@@ -270,6 +290,9 @@ button {
   overflow-y: auto;
   z-index: 100;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .dropdown-list li {
@@ -327,6 +350,7 @@ button {
   font-size: 0.95rem;
   width: fit-content;
   transition: background 0.2s;
+  min-height: 40px;
 }
 
 .nfc-btn:hover {
@@ -347,6 +371,7 @@ button {
   padding-left: 0.8rem;
   margin-top: 0.4rem;
   border-left: 3px solid #b1834b;
+  list-style: none;
 }
 
 .nfc-uid-list li {
@@ -358,7 +383,7 @@ button {
   font-size: 0.9rem;
 }
 
-/* Optional modal for NFC scanning (if modal approach is used) */
+/* Optional modal for NFC scanning */
 .nfc-modal-overlay {
   position: fixed;
   top: 0;
@@ -425,4 +450,188 @@ button {
   border-radius: 0.25rem;
   color: #3b0b0b;
   font-size: 0.9rem;
+}
+
+/* ========================================
+   MOBILE RESPONSIVE STYLES
+   ======================================== */
+
+/* Tablets and smaller laptops */
+@media (max-width: 1024px) {
+  .newBooks-wrapper {
+    gap: 1.5rem;
+  }
+}
+
+/* Tablets in portrait mode */
+@media (max-width: 768px) {
+  .newBooks-wrapper {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .form-section {
+    border: 1px solid #e0cfc0;
+    margin-bottom: 0;
+    padding: 1rem 1.5rem;
+  }
+
+  .preview-section {
+    border: 1px solid #e0cfc0;
+    padding: 1.5rem;
+  }
+
+  .form-header h2,
+  .preview-section h2 {
+    font-size: 1.3rem;
+  }
+
+  .form-buttons {
+    justify-content: space-between;
+  }
+
+  .clear-btn {
+    margin-right: 0;
+  }
+}
+
+/* Mobile devices */
+@media (max-width: 480px) {
+  .newBooks-wrapper {
+    gap: 1rem;
+  }
+
+  .form-section {
+    padding: 1rem;
+  }
+
+  .preview-section {
+    padding: 1rem;
+  }
+
+  .form-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .form-header h2,
+  .preview-section h2 {
+    font-size: 1.2rem;
+  }
+
+  .marc-upload-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.6rem 1rem;
+  }
+
+  .newBooks-wrapper label {
+    font-size: 0.9rem;
+    margin-top: 0.8rem;
+  }
+
+  .newBooks-wrapper input,
+  .newBooks-wrapper textarea {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+    min-height: 44px; /* Touch-friendly */
+  }
+
+  .newBooks-wrapper textarea {
+    height: 6rem;
+  }
+
+  .newBooks-wrapper button {
+    font-size: 0.9rem;
+    padding: 0.7rem 1.2rem;
+    min-height: 44px; /* Touch-friendly */
+  }
+
+  .form-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .back-btn,
+  .next-btn,
+  .add-btn {
+    width: 100%;
+  }
+
+  .clear-btn {
+    width: 100%;
+    text-align: center;
+    order: -1; /* Move to top */
+  }
+
+  .author-input-group {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .author-input-group .combobox {
+    width: 100%;
+  }
+
+  .remove-author-btn {
+    width: 100%;
+    padding: 0.6rem;
+  }
+
+  .add-author-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .preview-section p {
+    font-size: 0.9rem;
+    word-break: break-word;
+  }
+
+  .nfc-section {
+    padding: 1rem;
+  }
+
+  .nfc-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .nfc-uid-list {
+    max-height: 120px;
+  }
+
+  .dropdown-list {
+    max-height: 150px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 360px) {
+  .newBooks-wrapper {
+    gap: 0.8rem;
+  }
+
+  .form-section,
+  .preview-section {
+    padding: 0.8rem;
+  }
+
+  .form-header h2,
+  .preview-section h2 {
+    font-size: 1.1rem;
+  }
+
+  .newBooks-wrapper label,
+  .newBooks-wrapper input,
+  .newBooks-wrapper textarea,
+  .newBooks-wrapper button,
+  .preview-section p {
+    font-size: 0.85rem;
+  }
+
+  .nfc-section h3 {
+    font-size: 0.95rem;
+  }
 }
