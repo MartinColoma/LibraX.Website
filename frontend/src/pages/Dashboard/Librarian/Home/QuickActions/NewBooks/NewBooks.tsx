@@ -274,8 +274,8 @@ const NewBooks: React.FC = () => {
       categoryType: "",
       copies: "",
     });
+    setAuthors(record.authors || [""]);
 
-    setAuthors(Array.isArray(record.authors) ? record.authors : [""]);
 
 
     setMessage("✅ MARC file parsed successfully!");

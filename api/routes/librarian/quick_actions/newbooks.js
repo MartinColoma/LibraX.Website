@@ -183,21 +183,40 @@ module.exports = (app) => {
       const records = [];
       const parser = new Iso2709Parser();
 
+      function safeGet(record, tag, subfield) {
+        const field = record.get(tag);
+        if (!field) return "";
+
+        if (subfield) return field[subfield] || "";
+
+        if (field && typeof field === "object") {
+          return Object.values(field).join(" ").trim();
+        }
+
+        return String(field || "").trim();
+      }
+      // Inside parser 'data' event
       parser.on("data", (record) => {
         records.push({
-          title: record.get("245") ? record.get("245").a : "",
-          subtitle: record.get("245") ? record.get("245").b : "",
-          isbn: record.get("020") ? record.get("020").a : "",
-          authors: record.get("100") ? [record.get("100").a] : [],
-          publisher: record.get("260") ? record.get("260").b : "",
-          publicationYear: record.get("260") ? record.get("260").c : "",
-          edition: record.get("250") ? record.get("250").a : "",
-          language: record.get("041") ? record.get("041").a : "",
-          categoryType: "",
-          category: "",
-          description: "",
+          title: safeGet(record, "245", "a"),
+          subtitle: safeGet(record, "245", "b"),
+          isbn: safeGet(record, "020", "a"),
+          authors: [
+            safeGet(record, "100", "a") || safeGet(record, "110", "a")
+          ].filter(Boolean),
+          publisher: safeGet(record, "260", "b") || safeGet(record, "264", "b"),
+          publicationYear: safeGet(record, "260", "c") || safeGet(record, "264", "c"),
+          edition: safeGet(record, "250", "a"),
+          language: safeGet(record, "041", "a"),
+          description: safeGet(record, "300", "a"),
+          notes: safeGet(record, "500", "a"),
+          series: safeGet(record, "490", "a"),
+          control_001: safeGet(record, "001"),
+          control_005: safeGet(record, "005"),
+          control_008: safeGet(record, "008"),
         });
       });
+
 
       parser.on("end", () => res.status(200).json({ records }));
       parser.on("error", (err) => {
