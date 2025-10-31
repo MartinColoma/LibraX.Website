@@ -175,7 +175,7 @@ module.exports = (app) => {
   // ====================
   const upload = multer({ storage: multer.memoryStorage() });
 
-  router.post("/marc", upload.single("file"), async (req, res) => {
+    router.post("/marc", upload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -195,9 +195,9 @@ module.exports = (app) => {
 
         return String(field || "").trim();
       }
-      // Inside parser 'data' event
+
       parser.on("data", (record) => {
-        records.push({
+        const parsed = {
           title: safeGet(record, "245", "a"),
           subtitle: safeGet(record, "245", "b"),
           isbn: safeGet(record, "020", "a"),
@@ -214,11 +214,18 @@ module.exports = (app) => {
           control_001: safeGet(record, "001"),
           control_005: safeGet(record, "005"),
           control_008: safeGet(record, "008"),
-        });
+        };
+
+        console.log("📄 Parsed MARC record:", parsed); // <-- DEBUG LOG
+
+        records.push(parsed);
       });
 
+      parser.on("end", () => {
+        console.log(`✅ Finished parsing ${records.length} record(s)`);
+        res.status(200).json({ records });
+      });
 
-      parser.on("end", () => res.status(200).json({ records }));
       parser.on("error", (err) => {
         console.error("❌ MARC parsing error:", err);
         res.status(500).json({ message: "Failed to parse MARC file" });
