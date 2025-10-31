@@ -7,8 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 // ====================
 const multer = require("multer");
 const { Readable } = require("stream");
-const Marc = require("marcjs").Marc;
-const Iso2709Parser = require("marcjs").Iso2709Parser;
+const { parseSync } = require("marcjs");
 
 // ====================
 // 🔹 Env Validation
@@ -32,133 +31,109 @@ const generateIntId = () =>
 const generateBookId = () => uuidv4().replace(/-/g, "").slice(0, 11);
 
 // ====================
-// 🔹 Helper: Extract Year from Publication Date
+// 🔹 Helper: Safe Get (Like Python version)
+// ====================
+function safeGet(record, tag, code = null) {
+  try {
+    if (!record || !record.fields) return "";
+
+    // Get all fields with this tag
+    const fields = record.fields.filter(f => f.tag === tag);
+    if (fields.length === 0) return "";
+
+    const field = fields[0];
+
+    // Control fields (001, 005, 008, etc.)
+    if (field.data !== undefined) {
+      return String(field.data || "").trim();
+    }
+
+    // Data fields with subfields
+    if (code && field.subfields) {
+      const subfield = field.subfields.find(sf => sf.code === code);
+      if (subfield && subfield.value) {
+        return String(subfield.value).replace(/[\/\:;,.\s]+$/, "").trim();
+      }
+      return "";
+    }
+
+    // No code specified - concatenate all subfields
+    if (field.subfields) {
+      return field.subfields
+        .map(sf => String(sf.value || "").trim())
+        .filter(Boolean)
+        .join(" ")
+        .replace(/[\/\:;,.\s]+$/, "")
+        .trim();
+    }
+
+    return "";
+  } catch (err) {
+    console.error(`Error extracting ${tag}${code ? `$${code}` : ""}:`, err.message);
+    return "";
+  }
+}
+
+// ====================
+// 🔹 Helper: Get All Subfields
+// ====================
+function getAllSubjects(record, tag) {
+  try {
+    if (!record || !record.fields) return [];
+    
+    const fields = record.fields.filter(f => f.tag === tag);
+    const subjects = [];
+    
+    for (const field of fields) {
+      if (field.subfields) {
+        const subfield = field.subfields.find(sf => sf.code === "a");
+        if (subfield && subfield.value) {
+          subjects.push(String(subfield.value).trim());
+        }
+      }
+    }
+    
+    return subjects;
+  } catch (err) {
+    console.error(`Error extracting subjects from ${tag}:`, err.message);
+    return [];
+  }
+}
+
+// ====================
+// 🔹 Helper: Get All Authors (700 fields)
+// ====================
+function getAllContributors(record) {
+  try {
+    if (!record || !record.fields) return [];
+    
+    const fields = record.fields.filter(f => f.tag === "700");
+    const contributors = [];
+    
+    for (const field of fields) {
+      if (field.subfields) {
+        const subfield = field.subfields.find(sf => sf.code === "a");
+        if (subfield && subfield.value) {
+          const name = String(subfield.value).replace(/[,.\s]+$/, "").trim();
+          if (name) contributors.push(name);
+        }
+      }
+    }
+    
+    return contributors;
+  } catch (err) {
+    console.error("Error extracting contributors:", err.message);
+    return [];
+  }
+}
+
+// ====================
+// 🔹 Helper: Extract Year
 // ====================
 function extractYear(dateString) {
   if (!dateString) return "";
   const yearMatch = String(dateString).match(/\d{4}/);
   return yearMatch ? yearMatch[0] : "";
-}
-
-// ====================
-// 🔹 Helper: Clean ISBN
-// ====================
-function cleanISBN(isbn) {
-  if (!isbn) return "";
-  // Remove any text after ISBN, keep only numbers and hyphens
-  return isbn.split(/[\s(]/)[0].trim();
-}
-
-// ====================
-// 🔹 Helper: Clean Publisher Name
-// ====================
-function cleanPublisher(publisher) {
-  if (!publisher) return "";
-  // Remove trailing commas, colons, and semicolons
-  return publisher.replace(/[,:;]+$/, "").trim();
-}
-
-// ====================
-// 🔹 Helper: Clean Text (remove trailing punctuation)
-// ====================
-function cleanText(text) {
-  if (!text) return "";
-  return String(text).replace(/[\/.:,;]+$/, "").trim();
-}
-
-// ====================
-// 🔹 Helper: Safe Extract from MARC Record
-// ====================
-function getField(record, tag, subfield = null) {
-  try {
-    if (!record || !record.fields) return "";
-
-    // Find all matching fields
-    const matchingFields = record.fields.filter(f => f.tag === tag);
-    if (matchingFields.length === 0) return "";
-
-    // If no subfield specified, return the whole field
-    if (!subfield) {
-      const values = matchingFields.map(f => {
-        if (f.data) return String(f.data);
-        if (f.subfields) {
-          return f.subfields.map(sf => sf.value).join(" ");
-        }
-        return "";
-      }).filter(Boolean);
-      return values.join(" ").trim();
-    }
-
-    // Extract specific subfield
-    const values = [];
-    for (const field of matchingFields) {
-      if (field.subfields) {
-        for (const sf of field.subfields) {
-          if (sf.code === subfield) {
-            values.push(String(sf.value || "").trim());
-          }
-        }
-      }
-    }
-
-    return values.join(" ").trim();
-  } catch (err) {
-    console.error(`❌ Error extracting ${tag}${subfield ? `$${subfield}` : ""}:`, err.message);
-    return "";
-  }
-}
-
-// ====================
-// 🔹 Helper: Get Control Field
-// ====================
-function getControlField(record, tag) {
-  try {
-    if (!record || !record.fields) return "";
-    
-    const field = record.fields.find(f => f.tag === tag);
-    if (!field) return "";
-    
-    // Control fields have 'data' property
-    return String(field.data || "").trim();
-  } catch (err) {
-    console.error(`❌ Error extracting control field ${tag}:`, err.message);
-    return "";
-  }
-}
-
-// ====================
-// 🔹 Helper: Extract Multiple Authors
-// ====================
-function extractAuthors(record) {
-  const authors = [];
-  
-  try {
-    // Main author (100 or 110)
-    const mainAuthor = getField(record, "100", "a") || getField(record, "110", "a");
-    if (mainAuthor) {
-      authors.push(cleanText(mainAuthor));
-    }
-    
-    // Additional authors (700 field - can be multiple)
-    const additionalAuthors = record.fields
-      .filter(f => f.tag === "700")
-      .map(f => {
-        if (f.subfields) {
-          const authorSubfield = f.subfields.find(sf => sf.code === "a");
-          return authorSubfield ? cleanText(authorSubfield.value) : "";
-        }
-        return "";
-      })
-      .filter(Boolean);
-    
-    authors.push(...additionalAuthors);
-    
-    // Remove duplicates
-    return [...new Set(authors)].filter(a => a.length > 0);
-  } catch (err) {
-    console.error("❌ Error extracting authors:", err.message);
-    return [];
-  }
 }
 
 module.exports = (app) => {
@@ -307,120 +282,126 @@ module.exports = (app) => {
 
   router.post("/marc", upload.single("file"), async (req, res) => {
     try {
-      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
 
-      const stream = Readable.from(req.file.buffer);
+      console.log("📄 Parsing MARC file...");
+
+      // Parse MARC file synchronously
+      const parsedRecords = parseSync(req.file.buffer);
+      
+      if (!parsedRecords || parsedRecords.length === 0) {
+        return res.status(400).json({ message: "No valid MARC records found" });
+      }
+
       const records = [];
-      const parser = new Iso2709Parser();
 
-      parser.on("data", (record) => {
+      for (const record of parsedRecords) {
         try {
-          console.log("📄 Raw MARC record structure:", JSON.stringify(record, null, 2));
+          console.log("🔍 Processing record:", JSON.stringify(record, null, 2));
 
-          // Extract title and subtitle
-          const title = cleanText(getField(record, "245", "a"));
-          const subtitle = cleanText(getField(record, "245", "b"));
+          // Extract fields exactly like Python version
+          const title = safeGet(record, "245", "a");
+          const subtitle = safeGet(record, "245", "b");
           
-          // Extract ISBN and clean it
-          const rawISBN = getField(record, "020", "a");
-          const isbn = cleanISBN(rawISBN);
+          // Main author (100 or 110)
+          const mainAuthor = safeGet(record, "100", "a") || safeGet(record, "110", "a");
           
-          // Extract authors (can be multiple)
-          const authors = extractAuthors(record);
+          // Additional authors (700 fields)
+          const contributors = getAllContributors(record);
           
-          // Extract publisher and clean it
-          const rawPublisher = getField(record, "260", "b") || getField(record, "264", "b");
-          const publisher = cleanPublisher(rawPublisher);
+          // Combine all authors
+          const allAuthors = [mainAuthor, ...contributors].filter(Boolean);
           
-          // Extract publication year
-          const rawPubDate = getField(record, "260", "c") || getField(record, "264", "c");
-          const publicationYear = extractYear(rawPubDate);
+          // Publisher (260 or 264)
+          const publisher = safeGet(record, "260", "b") || safeGet(record, "264", "b");
           
-          // Extract edition
-          const edition = cleanText(getField(record, "250", "a"));
+          // Publication year (260 or 264)
+          const rawYear = safeGet(record, "260", "c") || safeGet(record, "264", "c");
+          const publicationYear = extractYear(rawYear);
           
-          // Extract language (3-letter code from 041 or position 35-37 of 008)
-          let language = getField(record, "041", "a");
-          if (!language) {
-            const controlField008 = getControlField(record, "008");
-            if (controlField008 && controlField008.length >= 38) {
-              language = controlField008.substring(35, 38).trim();
-            }
-          }
+          // ISBN
+          const isbn = safeGet(record, "020", "a");
           
-          // Extract physical description
-          const physicalDesc = getField(record, "300", "a");
+          // Subjects
+          const subjects = getAllSubjects(record, "650");
           
-          // Extract notes and summary
-          const notes = getField(record, "500", "a");
-          const summary = getField(record, "520", "a");
-          const description = summary || notes || physicalDesc;
+          // Control fields
+          const controlNumber = safeGet(record, "001");
+          const timestamp = safeGet(record, "005");
+          const fixedData = safeGet(record, "008");
           
-          // Extract classification numbers for potential category mapping
-          const lcClassification = getField(record, "050", "a");
-          const deweyClassification = getField(record, "082", "a");
-          const subject = getField(record, "650", "a");
+          // Other metadata
+          const edition = safeGet(record, "250", "a");
+          const description = safeGet(record, "300", "a");
+          const notes = safeGet(record, "500", "a");
+          const series = safeGet(record, "490", "a");
+          const language = safeGet(record, "041", "a");
+          const place = safeGet(record, "260", "a") || safeGet(record, "264", "a");
           
-          // Extract series information
-          const series = getField(record, "490", "a");
-          
-          // Control numbers
-          const controlNumber = getControlField(record, "001");
-          const lastModified = getControlField(record, "005");
+          // LC and Dewey classifications
+          const lcClassification = safeGet(record, "050", "a");
+          const deweyClassification = safeGet(record, "082", "a");
 
           const parsed = {
+            // Main bibliographic info
             title,
             subtitle,
             isbn,
-            authors: authors.length > 0 ? authors : [""],
+            authors: allAuthors.length > 0 ? allAuthors : [""],
             publisher,
             publicationYear,
             edition,
             language,
             description,
-            // Additional metadata
+            
+            // Classification & subjects
             lcClassification,
             deweyClassification,
-            subject,
+            subject: subjects.join(", "),
+            
+            // Additional metadata
             series,
             notes,
-            physicalDescription: physicalDesc,
-            // Control fields for reference
+            place,
+            
+            // Control fields
             controlNumber,
-            lastModified,
+            timestamp,
+            fixedData,
           };
 
-          console.log("✅ Parsed MARC record:", JSON.stringify(parsed, null, 2));
+          console.log("✅ Extracted MARC data:");
+          console.log(`   Title: ${parsed.title}`);
+          console.log(`   Authors: ${parsed.authors.join(", ")}`);
+          console.log(`   Publisher: ${parsed.publisher}`);
+          console.log(`   Year: ${parsed.publicationYear}`);
+          console.log(`   ISBN: ${parsed.isbn}`);
+          console.log(`   Edition: ${parsed.edition}`);
+          console.log(`   Language: ${parsed.language}`);
+
           records.push(parsed);
         } catch (err) {
           console.error("❌ Error parsing individual record:", err);
           console.error("Stack:", err.stack);
         }
-      });
+      }
 
-      parser.on("end", () => {
-        console.log(`✅ Finished parsing ${records.length} record(s)`);
-        if (records.length === 0) {
-          return res.status(400).json({ 
-            message: "No valid records found in MARC file" 
-          });
-        }
-        res.status(200).json({ records });
-      });
-
-      parser.on("error", (err) => {
-        console.error("❌ MARC parsing error:", err);
-        res.status(500).json({ 
-          message: "Failed to parse MARC file",
-          error: err.message 
+      if (records.length === 0) {
+        return res.status(400).json({ 
+          message: "Failed to extract data from MARC file" 
         });
-      });
+      }
 
-      stream.pipe(parser);
+      console.log(`✅ Successfully parsed ${records.length} record(s)`);
+      res.status(200).json({ records });
+
     } catch (err) {
-      console.error("❌ MARC route error:", err);
+      console.error("❌ MARC parsing error:", err);
+      console.error("Stack:", err.stack);
       res.status(500).json({ 
-        message: "Internal server error",
+        message: "Failed to parse MARC file",
         error: err.message 
       });
     }
