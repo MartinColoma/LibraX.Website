@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 // ====================
 const multer = require("multer");
 const { Readable } = require("stream");
-const { parseSync } = require("marcjs");
+const marcjs = require("marcjs"); 
 
 // ====================
 // 🔹 Env Validation
@@ -319,279 +319,282 @@ module.exports = (app) => {
     }
   });
 
-  // ====================
-  // 🔹 POST MARC Upload & Parse
-  // ====================
-  const upload = multer({ storage: multer.memoryStorage() });
-
-  // Try multiple parsing approaches
-  function tryParseMARC(buffer) {
-    const errors = [];
+  
+// ====================
+// 🔹 Helper: Parse MARC file with marcjs (stream-based)
+// ====================
+function parseMARC(buffer) {
+  return new Promise((resolve, reject) => {
+    const records = [];
+    let hasError = false;
     
-    // Method 1: Direct parseSync (binary MARC21)
     try {
-      console.log("Trying Method 1: Binary MARC21 with parseSync...");
-      const records = parseSync(buffer);
-      if (records && records.length > 0) {
-        console.log("✅ Method 1 succeeded!");
-        return records;
-      }
-    } catch (err) {
-      console.log("❌ Method 1 failed:", err.message);
-      errors.push(`Binary parse: ${err.message}`);
-    }
-    
-    // Method 2: Try as string (MARCXML or text)
-    try {
-      console.log("Trying Method 2: Text/XML MARC...");
-      const text = buffer.toString('utf8');
+      // Create readable stream from buffer
+      const stream = Readable.from(buffer);
       
-      // Check if it's XML
-      if (text.includes('<record>') || text.includes('<collection>')) {
-        console.log("Detected XML format");
-        errors.push("MARCXML format detected but not supported by marcjs. Please convert to MARC21 binary format.");
-        throw new Error("MARCXML not supported");
-      }
+      // Create parser - marcjs.parse returns a transform stream
+      const parser = marcjs.parse();
       
-      const records = parseSync(text);
-      if (records && records.length > 0) {
-        console.log("✅ Method 2 succeeded!");
-        return records;
-      }
-    } catch (err) {
-      console.log("❌ Method 2 failed:", err.message);
-      errors.push(`Text parse: ${err.message}`);
-    }
-    
-    // Method 3: Try with latin1 encoding
-    try {
-      console.log("Trying Method 3: Latin1 encoding...");
-      const text = buffer.toString('latin1');
-      const records = parseSync(text);
-      if (records && records.length > 0) {
-        console.log("✅ Method 3 succeeded!");
-        return records;
-      }
-    } catch (err) {
-      console.log("❌ Method 3 failed:", err.message);
-      errors.push(`Latin1 parse: ${err.message}`);
-    }
-    
-    throw new Error(`All parsing methods failed:\n${errors.join('\n')}`);
-  }
-
-  router.post("/marc", upload.single("file"), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      console.log("\n📄 ========== MARC FILE UPLOAD ==========");
-      console.log("File name:", req.file.originalname);
-      console.log("File size:", req.file.size, "bytes");
-      console.log("File mimetype:", req.file.mimetype);
-
-      // Validate file size
-      if (req.file.size === 0) {
-        return res.status(400).json({ message: "Empty MARC file uploaded" });
-      }
-
-      // Check file extension
-      const fileName = req.file.originalname.toLowerCase();
-      const validExtensions = ['.mrc', '.marc', '.dat', '.bin'];
-      const hasValidExt = validExtensions.some(ext => fileName.endsWith(ext));
-      
-      if (!hasValidExt) {
-        console.warn("⚠️ Unusual file extension:", fileName);
-      }
-
-      // Log first 200 bytes for debugging
-      const preview = req.file.buffer.slice(0, 200);
-      console.log("\n📋 File Preview (first 200 bytes):");
-      console.log("HEX:", preview.toString('hex').substring(0, 100) + "...");
-      console.log("ASCII:", preview.toString('utf8', 0, 50).replace(/[^\x20-\x7E]/g, '.') + "...");
-      
-      // Check for MARCXML
-      const headerStr = preview.toString('utf8', 0, 50);
-      if (headerStr.includes('<?xml')) {
-        return res.status(400).json({ 
-          message: "MARCXML format detected",
-          hint: "This appears to be a MARCXML file. Please convert it to MARC21 binary format (.mrc) using a tool like MarcEdit."
-        });
-      }
-
-      // Try parsing with multiple methods
-      let parsedRecords;
-      try {
-        parsedRecords = tryParseMARC(req.file.buffer);
-      } catch (parseError) {
-        console.error("❌ All parsing attempts failed:", parseError.message);
-        
-        return res.status(400).json({ 
-          message: "Invalid MARC file format",
-          details: parseError.message,
-          hints: [
-            "Ensure the file is in MARC21 binary format (.mrc or .marc)",
-            "If you have a MARCXML file, convert it using MarcEdit or similar tool",
-            "Try exporting from your library system in 'MARC binary' format",
-            "The file may be corrupted or truncated"
-          ]
-        });
-      }
-      
-      // Validate parsed records
-      if (!parsedRecords || !Array.isArray(parsedRecords) || parsedRecords.length === 0) {
-        console.error("❌ No valid MARC records found");
-        return res.status(400).json({ 
-          message: "No valid MARC records found in file",
-          hint: "The file was parsed but contains no usable records"
-        });
-      }
-
-      console.log(`\n📚 Found ${parsedRecords.length} MARC record(s)`);
-      console.log("========================================\n");
-
-      const records = [];
-
-      for (let idx = 0; idx < parsedRecords.length; idx++) {
-        const record = parsedRecords[idx];
-        
+      // Handle data events (each record)
+      parser.on('data', (record) => {
         try {
-          console.log(`🔍 Processing record ${idx + 1}/${parsedRecords.length}`);
-          
-          // Validate record structure
-          if (!record || typeof record !== 'object') {
-            console.warn(`   ⚠️ Record ${idx + 1} is not an object, skipping`);
-            continue;
-          }
-          
-          if (!record.fields || !Array.isArray(record.fields)) {
-            console.warn(`   ⚠️ Record ${idx + 1} has no fields array, skipping`);
-            continue;
-          }
-          
-          console.log(`   Fields count: ${record.fields.length}`);
-          
-          // Log sample fields for debugging
-          if (record.fields.length > 0) {
-            console.log(`   Sample field:`, JSON.stringify(record.fields[0]));
-          }
-
-          // Extract title and subtitle
-          const title = cleanText(getField(record, "245", "a"));
-          const subtitle = cleanText(getField(record, "245", "b"));
-          
-          console.log(`   Title: ${title || 'NOT FOUND'}`);
-          
-          if (!title) {
-            console.warn(`   ⚠️ No title found, skipping record`);
-            continue;
-          }
-          
-          // Extract ISBN
-          let isbn = getField(record, "020", "a");
-          if (!isbn) isbn = getField(record, "020", "z");
-          isbn = cleanISBN(isbn);
-          console.log(`   ISBN: ${isbn || 'N/A'}`);
-          
-          // Extract authors
-          const authors = extractAuthors(record);
-          console.log(`   Authors: ${authors.join(", ") || 'N/A'}`);
-          
-          // Extract publisher
-          const rawPublisher = getField(record, "260", "b") || getField(record, "264", "b");
-          const publisher = cleanPublisher(rawPublisher);
-          console.log(`   Publisher: ${publisher || 'N/A'}`);
-          
-          // Extract publication year
-          const rawPubDate = getField(record, "260", "c") || getField(record, "264", "c");
-          const publicationYear = extractYear(rawPubDate);
-          console.log(`   Year: ${publicationYear || 'N/A'}`);
-          
-          // Extract edition
-          const edition = cleanText(getField(record, "250", "a"));
-          
-          // Extract language
-          let language = getField(record, "041", "a");
-          if (!language) {
-            const field008 = getControlField(record, "008");
-            if (field008 && field008.length >= 38) {
-              language = field008.substring(35, 38).trim();
-            }
-          }
-          console.log(`   Language: ${language || 'N/A'}`);
-          
-          // Extract descriptions
-          const physicalDesc = getField(record, "300", "a");
-          const notes = getField(record, "500", "a");
-          const summary = getField(record, "520", "a");
-          const description = summary || notes || physicalDesc;
-          
-          // Extract classifications
-          const lcClassification = getField(record, "050", "a");
-          const deweyClassification = getField(record, "082", "a");
-          
-          // Extract subjects (all 650$a)
-          const subjects = getAllFieldValues(record, "650", "a");
-          const subject = subjects.map(s => cleanText(s)).join("; ");
-          
-          // Extract series
-          const series = getField(record, "490", "a");
-          
-          // Control fields
-          const controlNumber = getControlField(record, "001");
-          const lastModified = getControlField(record, "005");
-
-          const parsed = {
-            title,
-            subtitle,
-            isbn,
-            authors: authors.length > 0 ? authors : ["Unknown Author"],
-            publisher,
-            publicationYear,
-            edition,
-            language,
-            description,
-            lcClassification,
-            deweyClassification,
-            subject,
-            series,
-            notes,
-            physicalDescription: physicalDesc,
-            controlNumber,
-            lastModified,
-          };
-
-          console.log("   ✅ Successfully extracted record\n");
-          records.push(parsed);
-          
+          records.push(record);
         } catch (err) {
-          console.error(`❌ Error processing record ${idx + 1}:`, err.message);
-          console.error("Stack:", err.stack);
+          console.error("Error processing record:", err);
         }
-      }
-
-      if (records.length === 0) {
-        return res.status(400).json({ 
-          message: "No usable bibliographic data found",
-          hint: "The file was parsed but no records contained valid title data"
-        });
-      }
-
-      console.log(`✅ Successfully extracted ${records.length} of ${parsedRecords.length} record(s)\n`);
-      res.status(200).json({ records });
-
-    } catch (err) {
-      console.error("\n❌ Unexpected error:", err);
-      console.error("Stack:", err.stack);
-      
-      res.status(500).json({ 
-        message: "Unexpected server error while processing MARC file",
-        error: err.message
       });
+      
+      // Handle end event
+      parser.on('end', () => {
+        if (hasError) return; // Already rejected
+        
+        if (records.length === 0) {
+          reject(new Error('No valid MARC records found in file'));
+        } else {
+          console.log(`✅ Parsed ${records.length} record(s)`);
+          resolve(records);
+        }
+      });
+      
+      // Handle errors
+      parser.on('error', (error) => {
+        hasError = true;
+        console.error("Parser error:", error.message);
+        reject(new Error(`MARC parsing failed: ${error.message}`));
+      });
+      
+      // Pipe the stream through the parser
+      stream.pipe(parser);
+      
+    } catch (err) {
+      reject(err);
     }
   });
+}
 
+// ====================
+// 🔹 COMPLETE MARC ROUTE
+// ====================
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.post("/marc", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    console.log("\n📄 ========== MARC FILE UPLOAD ==========");
+    console.log("File name:", req.file.originalname);
+    console.log("File size:", req.file.size, "bytes");
+    console.log("File mimetype:", req.file.mimetype);
+
+    // Validate file size
+    if (req.file.size === 0) {
+      return res.status(400).json({ message: "Empty MARC file uploaded" });
+    }
+
+    // Check file extension
+    const fileName = req.file.originalname.toLowerCase();
+    const validExtensions = ['.mrc', '.marc', '.dat', '.bin'];
+    const hasValidExt = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidExt) {
+      console.warn("⚠️ Unusual file extension:", fileName);
+    }
+
+    // Log first 100 bytes for debugging
+    const preview = req.file.buffer.slice(0, 100);
+    console.log("\n📋 File Preview:");
+    console.log("HEX:", preview.toString('hex').substring(0, 60) + "...");
+    console.log("ASCII:", preview.toString('utf8', 0, 30).replace(/[^\x20-\x7E]/g, '.') + "...");
+    
+    // Check for MARCXML
+    const headerStr = preview.toString('utf8', 0, 50);
+    if (headerStr.includes('<?xml')) {
+      return res.status(400).json({ 
+        message: "MARCXML format detected",
+        hint: "This appears to be a MARCXML file. Please convert it to MARC21 binary format (.mrc) using a tool like MarcEdit."
+      });
+    }
+
+    // Parse MARC file
+    let parsedRecords;
+    try {
+      console.log("\n🔄 Parsing MARC file with marcjs...");
+      parsedRecords = await parseMARC(req.file.buffer);
+    } catch (parseError) {
+      console.error("❌ MARC parsing error:", parseError.message);
+      
+      return res.status(400).json({ 
+        message: "Invalid MARC file format",
+        details: parseError.message,
+        hints: [
+          "Ensure the file is in MARC21 binary format (.mrc or .marc)",
+          "The file may be corrupted or in an unsupported format",
+          "Try opening the file in MarcEdit to verify it's valid",
+          "Some MARC files use special encodings - try re-exporting from your library system"
+        ]
+      });
+    }
+    
+    // Validate parsed records
+    if (!parsedRecords || !Array.isArray(parsedRecords) || parsedRecords.length === 0) {
+      console.error("❌ No valid MARC records found");
+      return res.status(400).json({ 
+        message: "No valid MARC records found in file",
+        hint: "The file was parsed but contains no usable records"
+      });
+    }
+
+    console.log(`\n📚 Processing ${parsedRecords.length} MARC record(s)`);
+    console.log("========================================\n");
+
+    const records = [];
+
+    for (let idx = 0; idx < parsedRecords.length; idx++) {
+      const record = parsedRecords[idx];
+      
+      try {
+        console.log(`🔍 Processing record ${idx + 1}/${parsedRecords.length}`);
+        
+        // Validate record structure
+        if (!record || typeof record !== 'object') {
+          console.warn(`   ⚠️ Record ${idx + 1} is not an object, skipping`);
+          continue;
+        }
+        
+        if (!record.fields || !Array.isArray(record.fields)) {
+          console.warn(`   ⚠️ Record ${idx + 1} has no fields array, skipping`);
+          continue;
+        }
+        
+        console.log(`   Fields count: ${record.fields.length}`);
+        
+        // Log sample field to understand structure
+        if (record.fields.length > 0) {
+          const sampleField = record.fields.find(f => Array.isArray(f) && f.length > 2);
+          if (sampleField) {
+            console.log(`   Sample field structure:`, JSON.stringify(sampleField));
+          }
+        }
+
+        // Extract title and subtitle
+        const title = cleanText(getField(record, "245", "a"));
+        const subtitle = cleanText(getField(record, "245", "b"));
+        
+        console.log(`   Title: ${title || 'NOT FOUND'}`);
+        
+        if (!title) {
+          console.warn(`   ⚠️ No title found (245$a), skipping record`);
+          continue;
+        }
+        
+        // Extract ISBN
+        let isbn = getField(record, "020", "a");
+        if (!isbn) isbn = getField(record, "020", "z");
+        isbn = cleanISBN(isbn);
+        console.log(`   ISBN: ${isbn || 'N/A'}`);
+        
+        // Extract authors
+        const authors = extractAuthors(record);
+        console.log(`   Authors: ${authors.join(", ") || 'N/A'}`);
+        
+        // Extract publisher
+        const rawPublisher = getField(record, "260", "b") || getField(record, "264", "b");
+        const publisher = cleanPublisher(rawPublisher);
+        console.log(`   Publisher: ${publisher || 'N/A'}`);
+        
+        // Extract publication year
+        const rawPubDate = getField(record, "260", "c") || getField(record, "264", "c");
+        const publicationYear = extractYear(rawPubDate);
+        console.log(`   Year: ${publicationYear || 'N/A'}`);
+        
+        // Extract edition
+        const edition = cleanText(getField(record, "250", "a"));
+        
+        // Extract language
+        let language = getField(record, "041", "a");
+        if (!language) {
+          const field008 = getControlField(record, "008");
+          if (field008 && field008.length >= 38) {
+            language = field008.substring(35, 38).trim();
+          }
+        }
+        console.log(`   Language: ${language || 'N/A'}`);
+        
+        // Extract descriptions
+        const physicalDesc = getField(record, "300", "a");
+        const notes = getField(record, "500", "a");
+        const summary = getField(record, "520", "a");
+        const description = summary || notes || physicalDesc;
+        
+        // Extract classifications
+        const lcClassification = getField(record, "050", "a");
+        const deweyClassification = getField(record, "082", "a");
+        
+        // Extract subjects (all 650$a)
+        const subjects = getAllFieldValues(record, "650", "a");
+        const subject = subjects.map(s => cleanText(s)).join("; ");
+        
+        // Extract series
+        const series = getField(record, "490", "a");
+        
+        // Control fields
+        const controlNumber = getControlField(record, "001");
+        const lastModified = getControlField(record, "005");
+
+        const parsed = {
+          title,
+          subtitle,
+          isbn,
+          authors: authors.length > 0 ? authors : ["Unknown Author"],
+          publisher,
+          publicationYear,
+          edition,
+          language,
+          description,
+          lcClassification,
+          deweyClassification,
+          subject,
+          series,
+          notes,
+          physicalDescription: physicalDesc,
+          controlNumber,
+          lastModified,
+        };
+
+        console.log("   ✅ Successfully extracted record\n");
+        records.push(parsed);
+        
+      } catch (err) {
+        console.error(`❌ Error processing record ${idx + 1}:`, err.message);
+        console.error("Stack:", err.stack);
+      }
+    }
+
+    if (records.length === 0) {
+      return res.status(400).json({ 
+        message: "No usable bibliographic data found",
+        hint: "The file was parsed but no records contained valid title data (245$a)"
+      });
+    }
+
+    console.log(`✅ Successfully extracted ${records.length} of ${parsedRecords.length} record(s)\n`);
+    res.status(200).json({ records });
+
+  } catch (err) {
+    console.error("\n❌ Unexpected error:", err);
+    console.error("Stack:", err.stack);
+    
+    res.status(500).json({ 
+      message: "Unexpected server error while processing MARC file",
+      error: err.message
+    });
+  }
+});
+
+// Note: getField, getControlField, extractAuthors, cleanText, etc. 
+// helper func
   // ====================
   // 🔹 Mount Router
   // ====================
