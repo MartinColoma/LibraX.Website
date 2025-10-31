@@ -31,6 +31,58 @@ const generateIntId = () =>
 
 const generateBookId = () => uuidv4().replace(/-/g, "").slice(0, 11);
 
+// ====================
+// 🔹 Helper: Extract Year from Publication Date
+// ====================
+function extractYear(dateString) {
+  if (!dateString) return "";
+  const yearMatch = String(dateString).match(/\d{4}/);
+  return yearMatch ? yearMatch[0] : "";
+}
+
+// ====================
+// 🔹 Helper: Clean ISBN
+// ====================
+function cleanISBN(isbn) {
+  if (!isbn) return "";
+  // Remove any text after ISBN, keep only numbers and hyphens
+  return isbn.split(/[\s(]/)[0].trim();
+}
+
+// ====================
+// 🔹 Helper: Clean Publisher Name
+// ====================
+function cleanPublisher(publisher) {
+  if (!publisher) return "";
+  // Remove trailing commas, colons, and semicolons
+  return publisher.replace(/[,:;]+$/, "").trim();
+}
+
+// ====================
+// 🔹 Helper: Extract Multiple Authors
+// ====================
+function extractAuthors(record, safeGet) {
+  const authors = [];
+  
+  // Main author (100 or 110)
+  const mainAuthor = safeGet(record, "100", "a") || safeGet(record, "110", "a");
+  if (mainAuthor) authors.push(mainAuthor.replace(/[,.]$/, "").trim());
+  
+  // Additional authors (700 field - can be multiple)
+  const additionalFields = record.fields.filter(f => f.tag === "700");
+  for (const field of additionalFields) {
+    const author = field.subfields?.find(sf => sf.code === "a")?.value;
+    if (author) {
+      const cleanedAuthor = author.replace(/[,.]$/, "").trim();
+      if (!authors.includes(cleanedAuthor)) {
+        authors.push(cleanedAuthor);
+      }
+    }
+  }
+  
+  return authors.filter(Boolean);
+}
+
 module.exports = (app) => {
   const router = express.Router();
   router.use(express.json({ limit: "5mb" }));
@@ -175,7 +227,7 @@ module.exports = (app) => {
   // ====================
   const upload = multer({ storage: multer.memoryStorage() });
 
-    router.post("/marc", upload.single("file"), async (req, res) => {
+  router.post("/marc", upload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -184,57 +236,132 @@ module.exports = (app) => {
       const parser = new Iso2709Parser();
 
       function safeGet(record, tag, subfield) {
-        const field = record.get(tag);
-        if (!field) return "";
+        try {
+          const field = record.get(tag);
+          if (!field) return "";
 
-        if (subfield) return field[subfield] || "";
+          if (subfield) {
+            // Handle subfield extraction
+            if (Array.isArray(field)) {
+              for (const f of field) {
+                if (f && f[subfield]) return String(f[subfield]).trim();
+              }
+              return "";
+            }
+            return field[subfield] ? String(field[subfield]).trim() : "";
+          }
 
-        if (field && typeof field === "object") {
-          return Object.values(field).join(" ").trim();
+          // No subfield specified - return the whole field
+          if (typeof field === "string") return field.trim();
+          if (Array.isArray(field)) return field.join(" ").trim();
+          if (typeof field === "object") {
+            return Object.values(field).filter(v => v).join(" ").trim();
+          }
+
+          return String(field || "").trim();
+        } catch (err) {
+          console.error(`Error extracting tag ${tag}${subfield ? `:${subfield}` : ""}:`, err);
+          return "";
         }
-
-        return String(field || "").trim();
       }
 
       parser.on("data", (record) => {
-        const parsed = {
-          title: safeGet(record, "245", "a"),
-          subtitle: safeGet(record, "245", "b"),
-          isbn: safeGet(record, "020", "a"),
-          authors: [
-            safeGet(record, "100", "a") || safeGet(record, "110", "a")
-          ].filter(Boolean),
-          publisher: safeGet(record, "260", "b") || safeGet(record, "264", "b"),
-          publicationYear: safeGet(record, "260", "c") || safeGet(record, "264", "c"),
-          edition: safeGet(record, "250", "a"),
-          language: safeGet(record, "041", "a"),
-          description: safeGet(record, "300", "a"),
-          notes: safeGet(record, "500", "a"),
-          series: safeGet(record, "490", "a"),
-          control_001: safeGet(record, "001"),
-          control_005: safeGet(record, "005"),
-          control_008: safeGet(record, "008"),
-        };
+        try {
+          // Extract title and subtitle
+          const title = safeGet(record, "245", "a").replace(/[\/:]$/, "").trim();
+          const subtitle = safeGet(record, "245", "b").replace(/[\/.]$/, "").trim();
+          
+          // Extract ISBN and clean it
+          const rawISBN = safeGet(record, "020", "a");
+          const isbn = cleanISBN(rawISBN);
+          
+          // Extract authors (can be multiple)
+          const authors = extractAuthors(record, safeGet);
+          
+          // Extract publisher and clean it
+          const rawPublisher = safeGet(record, "260", "b") || safeGet(record, "264", "b");
+          const publisher = cleanPublisher(rawPublisher);
+          
+          // Extract publication year
+          const rawPubDate = safeGet(record, "260", "c") || safeGet(record, "264", "c");
+          const publicationYear = extractYear(rawPubDate);
+          
+          // Extract edition
+          const edition = safeGet(record, "250", "a").replace(/[\/.]$/, "").trim();
+          
+          // Extract language (3-letter code)
+          const language = safeGet(record, "041", "a") || safeGet(record, "008").substring(35, 38);
+          
+          // Extract physical description
+          const physicalDesc = safeGet(record, "300", "a");
+          
+          // Extract notes and summary
+          const notes = safeGet(record, "500", "a");
+          const summary = safeGet(record, "520", "a");
+          const description = summary || notes || physicalDesc;
+          
+          // Extract classification numbers for potential category mapping
+          const lcClassification = safeGet(record, "050", "a"); // Library of Congress
+          const deweyClassification = safeGet(record, "082", "a"); // Dewey Decimal
+          const subject = safeGet(record, "650", "a"); // Subject heading
+          
+          // Extract series information
+          const series = safeGet(record, "490", "a");
+          
+          const parsed = {
+            title,
+            subtitle,
+            isbn,
+            authors: authors.length > 0 ? authors : [""],
+            publisher,
+            publicationYear,
+            edition,
+            language,
+            description,
+            // Additional metadata
+            lcClassification,
+            deweyClassification,
+            subject,
+            series,
+            notes,
+            physicalDescription: physicalDesc,
+            // Control fields for reference
+            controlNumber: safeGet(record, "001"),
+            lastModified: safeGet(record, "005"),
+          };
 
-        console.log("📄 Parsed MARC record:", parsed); // <-- DEBUG LOG
-
-        records.push(parsed);
+          console.log("📄 Parsed MARC record:", JSON.stringify(parsed, null, 2));
+          records.push(parsed);
+        } catch (err) {
+          console.error("❌ Error parsing individual record:", err);
+        }
       });
 
       parser.on("end", () => {
         console.log(`✅ Finished parsing ${records.length} record(s)`);
+        if (records.length === 0) {
+          return res.status(400).json({ 
+            message: "No valid records found in MARC file" 
+          });
+        }
         res.status(200).json({ records });
       });
 
       parser.on("error", (err) => {
         console.error("❌ MARC parsing error:", err);
-        res.status(500).json({ message: "Failed to parse MARC file" });
+        res.status(500).json({ 
+          message: "Failed to parse MARC file",
+          error: err.message 
+        });
       });
 
       stream.pipe(parser);
     } catch (err) {
       console.error("❌ MARC route error:", err);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ 
+        message: "Internal server error",
+        error: err.message 
+      });
     }
   });
 

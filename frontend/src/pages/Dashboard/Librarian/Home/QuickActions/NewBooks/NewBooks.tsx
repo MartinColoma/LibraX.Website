@@ -4,7 +4,7 @@ import { Loader2, Upload, Plus, X, ChevronDown } from "lucide-react";
 import usePageMeta from "../../../../../../hooks/usePageMeta";
 
 const NewBooks: React.FC = () => {
-  usePageMeta("Librarian - Add New Books", "/LibraX Square Logo 1.png");
+  usePageMeta("Home - Add New Books", "/LibraX Square Logo 1.png");
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -31,6 +31,14 @@ const NewBooks: React.FC = () => {
   });
   const [authors, setAuthors] = useState<string[]>([""]);
 
+  // === MARC METADATA (for display purposes) ===
+  const [marcMetadata, setMarcMetadata] = useState<{
+    lcClassification?: string;
+    deweyClassification?: string;
+    subject?: string;
+    series?: string;
+  }>({});
+
   // === NFC STATES ===
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcReading, setNfcReading] = useState(false);
@@ -41,6 +49,29 @@ const NewBooks: React.FC = () => {
 
   // === MARC INPUT REF ===
   const marcInputRef = useRef<HTMLInputElement | null>(null);
+
+  // === LANGUAGE MAPPING ===
+  const languageMap: { [key: string]: string } = {
+    eng: "English",
+    spa: "Spanish",
+    fre: "French",
+    ger: "German",
+    ita: "Italian",
+    por: "Portuguese",
+    jpn: "Japanese",
+    chi: "Chinese",
+    rus: "Russian",
+    ara: "Arabic",
+    hin: "Hindi",
+    tgl: "Tagalog",
+    fil: "Filipino",
+  };
+
+  const mapLanguageCode = (code: string): string => {
+    if (!code) return "";
+    const lowerCode = code.toLowerCase().trim();
+    return languageMap[lowerCode] || code;
+  };
 
   // === FETCH AUTHORS ===
   useEffect(() => {
@@ -150,6 +181,7 @@ const NewBooks: React.FC = () => {
       setNfcReading(false);
     }
   };
+
   const stopNFCReading = () => {
     if (nfcAbortControllerRef.current) nfcAbortControllerRef.current.abort();
     setNfcReading(false);
@@ -189,6 +221,7 @@ const NewBooks: React.FC = () => {
     setStep(1);
     setScannedUIDs([]);
     setNfcMessage("");
+    setMarcMetadata({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -239,55 +272,79 @@ const NewBooks: React.FC = () => {
   const handleMarcButtonClick = () => marcInputRef.current?.click();
 
   const handleMarcFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  setLoading(true);
-  setMessage("📄 Parsing MARC file...");
+    setLoading(true);
+    setMessage("📄 Parsing MARC file...");
 
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    const res = await fetch(
-      "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/marc",
-      { method: "POST", body: formData }
-    );
+      const res = await fetch(
+        "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/marc",
+        { method: "POST", body: formData }
+      );
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to parse MARC file");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to parse MARC file");
 
-    const record = data.records?.[0];
-    if (!record) throw new Error("No MARC record found");
+      const record = data.records?.[0];
+      if (!record) throw new Error("No MARC record found in file");
 
-    // === Map MARC fields to form fields ===
-    setBook({
-      title: record.title || "",
-      subtitle: record.subtitle || "",
-      isbn: record.isbn || "",
-      publisher: record.publisher || "",
-      publicationYear: record.publicationYear || "",
-      edition: record.edition || "",
-      language: record.language || "",
-      description: record.description || "",
-      category: "",
-      categoryType: "",
-      copies: "",
-    });
-    setAuthors(record.authors || [""]);
+      console.log("📖 Received MARC record:", record);
 
+      // === Format publication year for date input ===
+      let formattedYear = "";
+      if (record.publicationYear) {
+        const year = record.publicationYear.match(/\d{4}/)?.[0];
+        if (year) {
+          formattedYear = `${year}-01-01`; // Format as YYYY-MM-DD for date input
+        }
+      }
 
+      // === Map language code to full name ===
+      const language = mapLanguageCode(record.language);
 
-    setMessage("✅ MARC file parsed successfully!");
-  } catch (err: any) {
-    console.error("❌ MARC upload error:", err);
-    setMessage(`❌ ${err.message}`);
-  } finally {
-    setLoading(false);
-    if (marcInputRef.current) marcInputRef.current.value = "";
-  }
-};
+      // === Update form with MARC data ===
+      setBook({
+        title: record.title || "",
+        subtitle: record.subtitle || "",
+        isbn: record.isbn || "",
+        publisher: record.publisher || "",
+        publicationYear: formattedYear,
+        edition: record.edition || "",
+        language: language,
+        description: record.description || "",
+        category: "",
+        categoryType: "",
+        copies: "1",
+      });
 
+      // === Set authors (ensure at least one empty field) ===
+      const marcAuthors = record.authors && record.authors.length > 0 
+        ? record.authors.filter((a: string) => a.trim() !== "")
+        : [""];
+      setAuthors(marcAuthors.length > 0 ? marcAuthors : [""]);
+
+      // === Store MARC metadata for reference ===
+      setMarcMetadata({
+        lcClassification: record.lcClassification,
+        deweyClassification: record.deweyClassification,
+        subject: record.subject,
+        series: record.series,
+      });
+
+      setMessage("✅ MARC file parsed successfully! Please verify and select category.");
+    } catch (err: any) {
+      console.error("❌ MARC upload error:", err);
+      setMessage(`❌ ${err.message}`);
+    } finally {
+      setLoading(false);
+      if (marcInputRef.current) marcInputRef.current.value = "";
+    }
+  };
 
   const totalCopies = Number(book.copies) || scannedUIDs.length;
   const allCopiesScanned = scannedUIDs.length >= totalCopies;
@@ -311,7 +368,33 @@ const NewBooks: React.FC = () => {
                 onChange={handleMarcFileChange}
               />
             </div>
-            <label>Book Title:</label>
+
+            {/* Display MARC metadata if available */}
+            {(marcMetadata.lcClassification || marcMetadata.deweyClassification || marcMetadata.subject) && (
+              <div style={{ 
+                background: "#f0f9ff", 
+                padding: "12px", 
+                borderRadius: "6px", 
+                marginBottom: "16px",
+                fontSize: "0.9em"
+              }}>
+                <strong>📚 MARC Classification Info:</strong>
+                {marcMetadata.lcClassification && (
+                  <div>• LC: {marcMetadata.lcClassification}</div>
+                )}
+                {marcMetadata.deweyClassification && (
+                  <div>• Dewey: {marcMetadata.deweyClassification}</div>
+                )}
+                {marcMetadata.subject && (
+                  <div>• Subject: {marcMetadata.subject}</div>
+                )}
+                {marcMetadata.series && (
+                  <div>• Series: {marcMetadata.series}</div>
+                )}
+              </div>
+            )}
+
+            <label>Book Title: *</label>
             <input
               name="title"
               value={book.title}
@@ -339,6 +422,7 @@ const NewBooks: React.FC = () => {
               value={book.description}
               onChange={handleChange}
               placeholder="Type any special marks, notes, or restrictions."
+              rows={4}
             />
           </>
         );
@@ -370,7 +454,7 @@ const NewBooks: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter book edition"
             />
-            <label>Category Type:</label>
+            <label>Category Type: *</label>
             <div className="combobox">
               <input
                 name="categoryType"
@@ -379,6 +463,7 @@ const NewBooks: React.FC = () => {
                 placeholder="Select or type a category type"
                 onFocus={() => setShowTypeList(true)}
                 onBlur={() => setTimeout(() => setShowTypeList(false), 200)}
+                required
               />
               <ChevronDown className="dropdown-icon" />
               {showTypeList && (
@@ -402,15 +487,26 @@ const NewBooks: React.FC = () => {
               )}
             </div>
 
-            <label>Category:</label>
+            <label>Category: *</label>
             <div className="combobox">
               <input
                 name="category"
-                value={book.category}
+                value={
+                  book.category
+                    ? filteredCategories.find((c) => c.category_id === parseInt(book.category))
+                        ?.category_name || book.category
+                    : ""
+                }
                 onChange={handleChange}
-                placeholder="Select or type a category"
+                placeholder={
+                  book.categoryType
+                    ? "Select a category"
+                    : "Please select category type first"
+                }
                 onFocus={() => setShowCategoryList(true)}
                 onBlur={() => setTimeout(() => setShowCategoryList(false), 200)}
+                disabled={!book.categoryType}
+                required
               />
               <ChevronDown className="dropdown-icon" />
               {showCategoryList && filteredCategories.length > 0 && (
@@ -421,7 +517,7 @@ const NewBooks: React.FC = () => {
                       onClick={() => {
                         setBook((prev) => ({
                           ...prev,
-                          category: cat.category_id,
+                          category: String(cat.category_id),
                         }));
                         setShowCategoryList(false);
                       }}
@@ -446,7 +542,7 @@ const NewBooks: React.FC = () => {
         return (
           <>
             <h2>Add New Book</h2>
-            <label>Author(s):</label>
+            <label>Author(s): *</label>
             {authors.map((author, index) => (
               <div key={index} className="author-input-group">
                 <div className="combobox">
@@ -455,6 +551,7 @@ const NewBooks: React.FC = () => {
                     onChange={(e) => handleAuthorChange(index, e.target.value)}
                     placeholder={`Author ${index + 1}`}
                     list={`author-suggestions-${index}`}
+                    required={index === 0}
                   />
                   <datalist id={`author-suggestions-${index}`}>
                     {allAuthors
@@ -481,13 +578,15 @@ const NewBooks: React.FC = () => {
               <Plus size={16} /> Add Another Author
             </button>
 
-            <label>Quantity Available:</label>
+            <label>Quantity Available: *</label>
             <input
               type="number"
               name="copies"
               value={book.copies}
               onChange={handleChange}
               placeholder="Enter total number of copies"
+              min="1"
+              required
             />
           </>
         );
@@ -597,13 +696,18 @@ const NewBooks: React.FC = () => {
           <strong>Publisher:</strong> {book.publisher || "[Publisher names]"}
         </p>
         <p>
-          <strong>Publication Year:</strong> {book.publicationYear || "[YYYY-MM-DD]"}
+          <strong>Publication Year:</strong>{" "}
+          {book.publicationYear ? new Date(book.publicationYear).getFullYear() : "[YYYY]"}
         </p>
         <p>
           <strong>Edition:</strong> {book.edition || "[Edition]"}
         </p>
         <p>
-          <strong>Category:</strong> {book.category || "[Category]"}
+          <strong>Category:</strong>{" "}
+          {book.category
+            ? filteredCategories.find((c) => c.category_id === parseInt(book.category))
+                ?.category_name || "[Category]"
+            : "[Category]"}
         </p>
         <p>
           <strong>Category Type:</strong> {book.categoryType || "[Category Type]"}
