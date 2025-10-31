@@ -29,7 +29,6 @@ const NewBooks: React.FC = () => {
     language: "",
     copies: "",
   });
-
   const [authors, setAuthors] = useState<string[]>([""]);
 
   // === NFC STATES ===
@@ -39,6 +38,9 @@ const NewBooks: React.FC = () => {
   const [scannedUIDs, setScannedUIDs] = useState<string[]>([]);
   const nfcAbortControllerRef = useRef<AbortController | null>(null);
   const ndefReaderRef = useRef<any>(null);
+
+  // === MARC INPUT REF ===
+  const marcInputRef = useRef<HTMLInputElement | null>(null);
 
   // === FETCH AUTHORS ===
   useEffect(() => {
@@ -107,7 +109,6 @@ const NewBooks: React.FC = () => {
       alert("Native NFC not supported. Use USB reader instead.");
       return;
     }
-
     setNfcReading(true);
     setNfcMessage("📱 Waiting for NFC tag... Hold card near device.");
     nfcAbortControllerRef.current = new AbortController();
@@ -149,16 +150,13 @@ const NewBooks: React.FC = () => {
       setNfcReading(false);
     }
   };
-
   const stopNFCReading = () => {
     if (nfcAbortControllerRef.current) nfcAbortControllerRef.current.abort();
     setNfcReading(false);
   };
 
   // === FORM HANDLERS ===
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setBook((prev) => ({ ...prev, [name]: value }));
   };
@@ -170,8 +168,7 @@ const NewBooks: React.FC = () => {
   };
 
   const addAuthorField = () => setAuthors([...authors, ""]);
-  const removeAuthorField = (index: number) =>
-    setAuthors(authors.filter((_, i) => i !== index));
+  const removeAuthorField = (index: number) => setAuthors(authors.filter((_, i) => i !== index));
 
   const clearAll = () => {
     setBook({
@@ -196,7 +193,6 @@ const NewBooks: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setLoading(true);
     setMessage(null);
 
@@ -240,6 +236,55 @@ const NewBooks: React.FC = () => {
     }
   };
 
+  const handleMarcButtonClick = () => marcInputRef.current?.click();
+
+  const handleMarcFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setMessage("📄 Parsing MARC file...");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(
+        "https://librax-website-frontend.onrender.com/api/librarian/quick_actions/newbooks/marc",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to parse MARC file");
+
+      const record = data.records?.[0];
+      if (!record) throw new Error("No MARC record found");
+
+      setBook((prev) => ({
+        ...prev,
+        title: record.title || "",
+        subtitle: record.subtitle || "",
+        isbn: record.isbn || "",
+        publisher: record.publisher || "",
+        publicationYear: record.publicationYear || "",
+        edition: record.edition || "",
+        language: record.language || "",
+        description: record.description || "",
+      }));
+      setAuthors(record.authors || [""]);
+      setMessage("✅ MARC file parsed successfully!");
+    } catch (err: any) {
+      console.error("❌ MARC upload error:", err);
+      setMessage(`❌ ${err.message}`);
+    } finally {
+      setLoading(false);
+      if (marcInputRef.current) marcInputRef.current.value = "";
+    }
+  };
+
   const totalCopies = Number(book.copies) || scannedUIDs.length;
   const allCopiesScanned = scannedUIDs.length >= totalCopies;
 
@@ -251,9 +296,16 @@ const NewBooks: React.FC = () => {
           <>
             <div className="form-header">
               <h2>Add New Book</h2>
-              <button type="button" className="marc-upload-btn">
+              <button type="button" className="marc-upload-btn" onClick={handleMarcButtonClick}>
                 MARC Upload <Upload size={16} />
               </button>
+              <input
+                type="file"
+                ref={marcInputRef}
+                accept=".mrc,.marc"
+                style={{ display: "none" }}
+                onChange={handleMarcFileChange}
+              />
             </div>
             <label>Book Title:</label>
             <input
@@ -477,7 +529,7 @@ const NewBooks: React.FC = () => {
         className="form-section"
         onSubmit={(e) => {
           e.preventDefault();
-          if (step === 4) handleSubmit(e); // 🔹 corrected step check
+          if (step === 4) handleSubmit(e);
         }}
       >
         {renderStep()}
@@ -553,7 +605,8 @@ const NewBooks: React.FC = () => {
           <strong>Category Type:</strong> {book.categoryType || "[Category Type]"}
         </p>
         <p>
-          <strong>Language:</strong> {book.language || "[Language]"}</p>
+          <strong>Language:</strong> {book.language || "[Language]"}
+        </p>
         <p>
           <strong>Quantity Available:</strong> {scannedUIDs.length || book.copies || "0"}
         </p>
